@@ -87,15 +87,12 @@ def inputs(train_dir,
   """Reads input data num_epochs times."""
   if multi:
     print('not supported.')
-  filename = os.path.join(train_dir, '{}_{}{}'.format(split, shift, train_file))
+  filename = os.path.join(train_dir, f'{split}_{shift}{train_file}')
 
   with tf.name_scope('input'):
     filename_queue = tf.train.string_input_producer([filename])
 
-    d = 0
-    if distort:
-      d = 1 + (split == 'test')
-
+    d = 1 + (split == 'test') if distort else 0
     # Even when reading in multiple threads, share the filename
     # queue.
     image, label = _read_and_decode(
@@ -117,7 +114,7 @@ def inputs(train_dir,
                                              batch_size=batch_size,
                                              num_threads=1,
                                              capacity=1000 + 3 * batch_size)
-    features = {
+    return {
         'images': images,
         'labels': tf.one_hot(sparse_labels, 10),
         'recons_image': images,
@@ -126,5 +123,3 @@ def inputs(train_dir,
         'depth': 1,
         'num_classes': 10,
     }
-
-    return features

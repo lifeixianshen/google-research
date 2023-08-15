@@ -57,8 +57,7 @@ def eval_policies(env, policies, n_episodes):
 # TODO(wuyifan): external version for loading environments
 def env_factory(env_name):
   py_env = suite_mujoco.load(env_name)
-  tf_env = tf_py_environment.TFPyEnvironment(py_env)
-  return tf_env
+  return tf_py_environment.TFPyEnvironment(py_env)
 
 
 def get_transition(time_step, next_time_step, action, next_action):

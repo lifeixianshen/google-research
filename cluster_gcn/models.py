@@ -29,8 +29,8 @@ class Model(object):
     allowed_kwargs = {
         'name', 'logging', 'multilabel', 'norm', 'precalc', 'num_layers'
     }
-    for kwarg, _ in kwargs.items():
-      assert kwarg in allowed_kwargs, 'Invalid keyword argument: ' + kwarg
+    for kwarg in kwargs:
+      assert kwarg in allowed_kwargs, f'Invalid keyword argument: {kwarg}'
     name = kwargs.get('name')
     if not name:
       name = self.__class__.__name__.lower()
@@ -71,10 +71,9 @@ class Model(object):
     for layer in self.layers:
       hidden = layer(self.activations[-1])
       if isinstance(hidden, tuple):
-        tf.logging.info('{} shape = {}'.format(layer.name,
-                                               hidden[0].get_shape()))
+        tf.logging.info(f'{layer.name} shape = {hidden[0].get_shape()}')
       else:
-        tf.logging.info('{} shape = {}'.format(layer.name, hidden.get_shape()))
+        tf.logging.info(f'{layer.name} shape = {hidden.get_shape()}')
       self.activations.append(hidden)
     self.outputs = self.activations[-1]
 
@@ -129,14 +128,14 @@ class Model(object):
     if not sess:
       raise AttributeError('TensorFlow session not provided.')
     saver = tf.train.Saver(self.vars)
-    save_path = saver.save(sess, 'tmp/%s.ckpt' % self.name)
+    save_path = saver.save(sess, f'tmp/{self.name}.ckpt')
     tf.logging.info('Model saved in file:', save_path)
 
   def load(self, sess=None):
     if not sess:
       raise AttributeError('TensorFlow session not provided.')
     saver = tf.train.Saver(self.vars)
-    save_path = 'tmp/%s.ckpt' % self.name
+    save_path = f'tmp/{self.name}.ckpt'
     saver.restore(sess, save_path)
     tf.logging.info('Model restored from file:', save_path)
 

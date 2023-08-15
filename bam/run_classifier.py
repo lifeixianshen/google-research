@@ -60,7 +60,7 @@ class MultitaskModel(object):
     self.outputs = {"task_id": features["task_id"]}
     losses = []
     for task in tasks:
-      with tf.variable_scope("task_specific/" + task.name):
+      with tf.variable_scope(f"task_specific/{task.name}"):
         task_losses, task_outputs = task.get_prediction_module(
             bert_model, features, is_training, percent_done)
         losses.append(task_losses * task_weights[task.name])
@@ -185,7 +185,7 @@ class ModelRunner(object):
       if r["task_id"] != len(self._tasks):
         r = utils.nest_dict(r, self._config.task_names)
         scorer.update(r[task.name])
-    utils.log(task.name + ": " + scorer.results_str())
+    utils.log(f"{task.name}: {scorer.results_str()}")
     utils.log()
     return dict(scorer.get_results())
 
@@ -212,11 +212,10 @@ class ModelRunner(object):
           utils.write_pickle(
               logits[task_name],
               self._config.distill_outputs(task_name, trial))
-      else:
-        if trial <= self._config.n_writes_test:
-          utils.write_pickle(logits[task_name],
-                             self._config.test_outputs(
-                                 task_name, split, trial))
+      elif trial <= self._config.n_writes_test:
+        utils.write_pickle(logits[task_name],
+                           self._config.test_outputs(
+                               task_name, split, trial))
 
 
 def write_results(config, results):
@@ -228,9 +227,9 @@ def write_results(config, results):
     results_str = ""
     for trial_results in results:
       for task_name, task_results in trial_results.items():
-        results_str += task_name + ": " + " - ".join(
+        results_str += (f"{task_name}: " + " - ".join(
             ["{:}: {:.2f}".format(k, v)
-             for k, v in task_results.items()]) + "\n"
+             for k, v in task_results.items()])) + "\n"
     f.write(results_str)
 
 
@@ -245,7 +244,7 @@ def main(_):
   utils.rmkdir(config.checkpoints_dir)
   heading_info = "model={:}, trial {:}/{:}".format(
       config.model_name, trial, config.num_trials)
-  heading = lambda msg: utils.heading(msg + ": " + heading_info)
+  heading = lambda msg: utils.heading(f"{msg}: {heading_info}")
 
   # Train and evaluate num_trials models with different random seeds
   while trial <= config.num_trials:

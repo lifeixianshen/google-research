@@ -117,10 +117,7 @@ class DataProcessor(object):
     """Reads a tab separated value file."""
     with tf.gfile.Open(input_file, "r") as f:
       reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
-      lines = []
-      for line in reader:
-        lines.append(line)
-      return lines
+      return list(reader)
 
   def process_text(self, text):
     if self.use_spm:
@@ -163,10 +160,7 @@ class MnliProcessor(DataProcessor):
       guid = self.process_text(line[0])
       text_a = self.process_text(line[8])
       text_b = self.process_text(line[9])
-      if set_type == "test":
-        label = "contradiction"
-      else:
-        label = self.process_text(line[-1])
+      label = "contradiction" if set_type == "test" else self.process_text(line[-1])
       examples.append(
           InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
     return examples
@@ -216,7 +210,7 @@ class MrpcProcessor(DataProcessor):
     for (i, line) in enumerate(lines):
       if i == 0:
         continue
-      guid = "%s-%s" % (set_type, i)
+      guid = f"{set_type}-{i}"
       text_a = self.process_text(line[3])
       text_b = self.process_text(line[4])
       if set_type == "test":
@@ -258,7 +252,7 @@ class ColaProcessor(DataProcessor):
       # Only the test set has a header
       if set_type == "test" and i == 0:
         continue
-      guid = "%s-%s" % (set_type, i)
+      guid = f"{set_type}-{i}"
       if set_type == "test":
         guid = line[0]
         text_a = self.process_text(line[1])
@@ -300,7 +294,7 @@ class Sst2Processor(DataProcessor):
       if i == 0:
         continue
       if set_type != "test":
-        guid = "%s-%s" % (set_type, i)
+        guid = f"{set_type}-{i}"
         text_a = self.process_text(line[0])
         label = self.process_text(line[1])
       else:
@@ -345,10 +339,7 @@ class StsbProcessor(DataProcessor):
       # guid = "%s-%s" % (set_type, line[0])
       text_a = self.process_text(line[7])
       text_b = self.process_text(line[8])
-      if set_type != "test":
-        label = float(line[-1])
-      else:
-        label = 0
+      label = float(line[-1]) if set_type != "test" else 0
       examples.append(
           InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
     return examples
@@ -475,10 +466,7 @@ class RteProcessor(DataProcessor):
       # guid = "%s-%s" % (set_type, line[0])
       text_a = self.process_text(line[1])
       text_b = self.process_text(line[2])
-      if set_type == "test":
-        label = "entailment"
-      else:
-        label = self.process_text(line[-1])
+      label = "entailment" if set_type == "test" else self.process_text(line[-1])
       examples.append(
           InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
     return examples
@@ -516,10 +504,7 @@ class WnliProcessor(DataProcessor):
       # guid = "%s-%s" % (set_type, line[0])
       text_a = self.process_text(line[1])
       text_b = self.process_text(line[2])
-      if set_type != "test":
-        label = self.process_text(line[-1])
-      else:
-        label = "0"
+      label = self.process_text(line[-1]) if set_type != "test" else "0"
       examples.append(
           InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
     return examples
@@ -548,10 +533,7 @@ class AXProcessor(DataProcessor):
       guid = self.process_text(line[0])
       text_a = self.process_text(line[1])
       text_b = self.process_text(line[2])
-      if set_type == "test":
-        label = "contradiction"
-      else:
-        label = self.process_text(line[-1])
+      label = "contradiction" if set_type == "test" else self.process_text(line[-1])
       examples.append(
           InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
     return examples
@@ -570,47 +552,19 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
         is_real_example=False)
 
   if task_name != "sts-b":
-    label_map = {}
-    for (i, label) in enumerate(label_list):
-      label_map[label] = i
-
+    label_map = {label: i for i, label in enumerate(label_list)}
   tokens_a = tokenizer.tokenize(example.text_a)
-  tokens_b = None
-  if example.text_b:
-    tokens_b = tokenizer.tokenize(example.text_b)
-
+  tokens_b = tokenizer.tokenize(example.text_b) if example.text_b else None
   if tokens_b:
     # Modifies `tokens_a` and `tokens_b` in place so that the total
     # length is less than the specified length.
     # Account for [CLS], [SEP], [SEP] with "- 3"
     _truncate_seq_pair(tokens_a, tokens_b, max_seq_length - 3)
-  else:
-    # Account for [CLS] and [SEP] with "- 2"
-    if len(tokens_a) > max_seq_length - 2:
-      tokens_a = tokens_a[0:(max_seq_length - 2)]
+  elif len(tokens_a) > max_seq_length - 2:
+    tokens_a = tokens_a[:max_seq_length - 2]
 
-  # The convention in ALBERT is:
-  # (a) For sequence pairs:
-  #  tokens:   [CLS] is this jack ##son ##ville ? [SEP] no it is not . [SEP]
-  #  type_ids: 0     0  0    0    0     0       0 0     1  1  1  1   1 1
-  # (b) For single sequences:
-  #  tokens:   [CLS] the dog is hairy . [SEP]
-  #  type_ids: 0     0   0   0  0     0 0
-  #
-  # Where "type_ids" are used to indicate whether this is the first
-  # sequence or the second sequence. The embedding vectors for `type=0` and
-  # `type=1` were learned during pre-training and are added to the
-  # embedding vector (and position vector). This is not *strictly* necessary
-  # since the [SEP] token unambiguously separates the sequences, but it makes
-  # it easier for the model to learn the concept of sequences.
-  #
-  # For classification tasks, the first vector (corresponding to [CLS]) is
-  # used as the "sentence vector". Note that this only makes sense because
-  # the entire model is fine-tuned.
-  tokens = []
-  segment_ids = []
-  tokens.append("[CLS]")
-  segment_ids.append(0)
+  tokens = ["[CLS]"]
+  segment_ids = [0]
   for token in tokens_a:
     tokens.append(token)
     segment_ids.append(0)
@@ -640,28 +594,25 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   assert len(input_mask) == max_seq_length
   assert len(segment_ids) == max_seq_length
 
-  if task_name != "sts-b":
-    label_id = label_map[example.label]
-  else:
-    label_id = example.label
-
+  label_id = label_map[example.label] if task_name != "sts-b" else example.label
   if ex_index < 5:
     tf.logging.info("*** Example ***")
-    tf.logging.info("guid: %s" % (example.guid))
-    tf.logging.info("tokens: %s" % " ".join(
-        [tokenization.printable_text(x) for x in tokens]))
-    tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-    tf.logging.info("input_mask: %s" % " ".join([str(x) for x in input_mask]))
-    tf.logging.info("segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
+    tf.logging.info(f"guid: {example.guid}")
+    tf.logging.info(
+        f'tokens: {" ".join([tokenization.printable_text(x) for x in tokens])}'
+    )
+    tf.logging.info(f'input_ids: {" ".join([str(x) for x in input_ids])}')
+    tf.logging.info(f'input_mask: {" ".join([str(x) for x in input_mask])}')
+    tf.logging.info(f'segment_ids: {" ".join([str(x) for x in segment_ids])}')
     tf.logging.info("label: %s (id = %d)" % (example.label, label_id))
 
-  feature = InputFeatures(
+  return InputFeatures(
       input_ids=input_ids,
       input_mask=input_mask,
       segment_ids=segment_ids,
       label_id=label_id,
-      is_real_example=True)
-  return feature
+      is_real_example=True,
+  )
 
 
 def file_based_convert_examples_to_features(
@@ -729,11 +680,7 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
 
   def input_fn(params):
     """The actual input function."""
-    if use_tpu:
-      batch_size = params["batch_size"]
-    else:
-      batch_size = bsz
-
+    batch_size = params["batch_size"] if use_tpu else bsz
     # For training, we want a lot of parallel reading and shuffling.
     # For eval, we want no shuffling and parallel reading doesn't matter.
     d = tf.data.TFRecordDataset(input_file)
@@ -830,7 +777,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
     tf.logging.info("*** Features ***")
     for name in sorted(features.keys()):
-      tf.logging.info("  name = %s, shape = %s" % (name, features[name].shape))
+      tf.logging.info(f"  name = {name}, shape = {features[name].shape}")
 
     input_ids = features["input_ids"]
     input_mask = features["input_mask"]

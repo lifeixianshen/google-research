@@ -143,9 +143,11 @@ class LossTest(tf.test.TestCase):
     loss_values = [[0.62870466], [0.45677936], [0.34298314], [0.26295574]]
     loss_out = []
     with self.cached_session() as sess:
-      for t1_value, t2_value in zip(t1_values, t2_values):
-        loss_out.append(sess.run(
-            actual_loss, feed_dict={t1: t1_value, t2: t2_value}))
+      loss_out.extend(
+          sess.run(actual_loss, feed_dict={
+              t1: t1_value,
+              t2: t2_value
+          }) for t1_value, t2_value in zip(t1_values, t2_values))
       self.assertAllClose(loss_values, loss_out, atol=1e-5)
 
   def test_sparse_loss(self):

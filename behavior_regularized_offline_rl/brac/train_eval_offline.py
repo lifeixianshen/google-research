@@ -102,7 +102,7 @@ def train_eval_offline(
   agent_ckpt_name = os.path.join(log_dir, 'agent')
 
   # Restore agent from checkpoint if there exists one.
-  if tf.io.gfile.exists('{}.index'.format(agent_ckpt_name)):
+  if tf.io.gfile.exists(f'{agent_ckpt_name}.index'):
     logging.info('Checkpoint found at %s.', agent_ckpt_name)
     agent.restore(agent_ckpt_name)
 
@@ -139,8 +139,10 @@ def train_eval_offline(
       eval_results.append([step] + eval_result)
       logging.info('Testing at step %d:', step)
       for policy_key, policy_info in eval_infos.items():
-        logging.info(utils.get_summary_str(
-            step=None, info=policy_info, prefix=policy_key+': '))
+        logging.info(
+            utils.get_summary_str(step=None,
+                                  info=policy_info,
+                                  prefix=f'{policy_key}: '))
         utils.write_summary(eval_summary_writers[policy_key], step, policy_info)
       time_st = time.time()
       timed_at_step = step

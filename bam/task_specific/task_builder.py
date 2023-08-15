@@ -50,4 +50,4 @@ def get_task(config, task_name, tokenizer):
   elif task_name == "sts":
     return classification_tasks.STS(config, tokenizer)
   else:
-    raise ValueError("Unknown task " + task_name)
+    raise ValueError(f"Unknown task {task_name}")

@@ -28,15 +28,13 @@ import pandas as pd
 
 def _list_subdirs(base_dir):
   """Lists all subdirectories in base_dir, raising ValueError if none exist."""
-  subdirs = []
-  for dir_entry in os.listdir(base_dir):
-    if os.path.isdir(os.path.join(base_dir, dir_entry)):
-      subdirs.append(dir_entry)
-
-  if not subdirs:
-    raise ValueError("No subdirectories found in {}".format(base_dir))
-
-  return subdirs
+  if subdirs := [
+      dir_entry for dir_entry in os.listdir(base_dir)
+      if os.path.isdir(os.path.join(base_dir, dir_entry))
+  ]:
+    return subdirs
+  else:
+    raise ValueError(f"No subdirectories found in {base_dir}")
 
 
 def load_study(study_dir,
@@ -99,7 +97,7 @@ def load_study(study_dir,
 
     # Ignore trials with the wrong status.
     status = trial_metadata["status"]
-    if status_whitelist and status not in status_whitelist:
+    if status not in status_whitelist:
       continue
 
     # Add trial metadata to the study metadata.
@@ -116,13 +114,13 @@ def load_study(study_dir,
 
   # Validate the number of trials.
   if not trial_ids:
-    raise ValueError("No trials with status {} found in {}".format(
-        list(status_whitelist), study_dir))
+    raise ValueError(
+        f"No trials with status {list(status_whitelist)} found in {study_dir}")
 
   if num_trials and len(trial_ids) != num_trials:
     raise ValueError(
-        "Requested {} trials with status {}, but found only {} trials in {}"
-        .format(num_trials, list(status_whitelist), len(trial_ids), study_dir))
+        f"Requested {num_trials} trials with status {list(status_whitelist)}, but found only {len(trial_ids)} trials in {study_dir}"
+    )
 
   study_measurements = pd.concat(
       measurements_tables, keys=trial_ids, names=["trial_id"])
@@ -174,9 +172,9 @@ def load_workload(workload_dir,
     study_tables.append(study_measurements)
     workload_metadata[batch_size] = study_metadata
 
-  print("Loaded {} batch sizes for {} on {} with optimizer {}".format(
-      len(batch_sizes), study_metadata["model"], study_metadata["dataset"],
-      study_metadata["optimizer"]))
+  print(
+      f'Loaded {len(batch_sizes)} batch sizes for {study_metadata["model"]} on {study_metadata["dataset"]} with optimizer {study_metadata["optimizer"]}'
+  )
 
   workload_table = pd.concat(
       study_tables, keys=batch_sizes, names=["batch_size"])

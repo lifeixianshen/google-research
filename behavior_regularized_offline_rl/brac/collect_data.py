@@ -107,7 +107,7 @@ def collect_data(
   action_spec = tf_env.action_spec()
 
   # Initialize dataset.
-  sample_sizes = list([cfg[-1] for cfg in data_config])
+  sample_sizes = [cfg[-1] for cfg in data_config]
   sample_sizes = get_sample_counts(n_samples, sample_sizes)
   with tf.device('/cpu:0'):
     data = dataset.Dataset(
@@ -154,7 +154,7 @@ def main(_):
       )
   utils.maybe_makedirs(log_dir)
   config_module = importlib.import_module(
-      '{}.{}'.format(FLAGS.config_dir, FLAGS.config_file))
+      f'{FLAGS.config_dir}.{FLAGS.config_file}')
   collect_data(
       log_dir=log_dir,
       data_config=config_module.get_data_config(FLAGS.env_name,

@@ -79,7 +79,7 @@ def get_optimizer(name):
       return tf.keras.optimizers.Adam(lr=lr)
     return adam_opt_
   else:
-    raise ValueError('Unknown optimizer %s.' % name)
+    raise ValueError(f'Unknown optimizer {name}.')
 
 
 def load_variable_from_ckpt(ckpt_name, var_name):
@@ -127,8 +127,7 @@ class Flags(object):
 
 def get_datetime():
   now = datetime.datetime.now().isoformat()
-  now = re.sub(r'\D', '', now)[:-6]
-  return now
+  return re.sub(r'\D', '', now)[:-6]
 
 
 def maybe_makedirs(log_dir):

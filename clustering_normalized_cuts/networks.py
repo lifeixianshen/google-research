@@ -161,7 +161,7 @@ class CncNet(object):
         'type': 'None',
         'size': n_clusters,
         'l2_reg': cnc_reg,
-        'name': 'cnc_{}'.format(len(arch))
+        'name': f'cnc_{len(arch)}',
     }]
 
     # create CncNet
@@ -275,9 +275,10 @@ class CncNet(object):
           x_unlabeled=x_val_unlabeled,
           inputs=self.inputs,
           y_true=self.y_true,
-          x_labeled=x_train_unlabeled[0:0],
+          x_labeled=x_train_unlabeled[:0],
           y_labeled=self.y_train_labeled_onehot,
-          batch_sizes=self.batch_sizes)
+          batch_sizes=self.batch_sizes,
+      )
 
       # do early stopping if necessary
       if self.lh.on_epoch_end(i, val_losses[i]):
@@ -287,8 +288,8 @@ class CncNet(object):
       # print training status
       print('Epoch: {}, loss={:2f}, val_loss={:2f}'.format(
           i, losses[i], val_losses[i]))
-      with gfile.Open(self.result_path + 'losses', 'a') as f:
-        f.write(str(i) + ' ' + str(losses[i]) + ' ' + str(val_losses[i]) + '\n')
+      with gfile.Open(f'{self.result_path}losses', 'a') as f:
+        f.write(f'{str(i)} {str(losses[i])} {str(val_losses[i])}' + '\n')
 
     model_json = self.net.to_json()
     save_model(self.net, model_json, self.result_path, file_name)
@@ -301,9 +302,10 @@ class CncNet(object):
         x_unlabeled=x,
         inputs=inputs_test,
         y_true=self.y_true,
-        x_labeled=x[0:0],
-        y_labeled=self.y_train_labeled_onehot[0:0],
-        batch_sizes=self.batch_sizes)
+        x_labeled=x[:0],
+        y_labeled=self.y_train_labeled_onehot[:0],
+        batch_sizes=self.batch_sizes,
+    )
 
 
 def save_model(net, model_json, output_path, file_name):
@@ -314,7 +316,7 @@ def save_model(net, model_json, output_path, file_name):
   weight_path = os.path.join(output_path, file_name, '.h5')
   local_filename = weight_path.split('/')[-1]
   tmp_filename = os.path.join(tempfile.gettempdir(),
-                              str(int(time.time())) + '_' + local_filename)
+                              f'{int(time.time())}_{local_filename}')
   net.save_weights(tmp_filename)
   gfile.Copy(tmp_filename, weight_path, overwrite=True)
   gfile.Remove(tmp_filename)
@@ -324,7 +326,7 @@ def load_model(net, output_path, file_name):
   weights_path = os.path.join(output_path, file_name, '.h5')
   local_filename = weights_path.split('/')[-1]
   tmp_filename = os.path.join(tempfile.gettempdir(),
-                              str(int(time.time())) + '_' + local_filename)
+                              f'{int(time.time())}_{local_filename}')
   gfile.Copy(weights_path, tmp_filename)
   net.load_weights(tmp_filename)
   gfile.Remove(tmp_filename)

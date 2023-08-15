@@ -55,10 +55,7 @@ FLAGS = flags.FLAGS
 def main(_):
   logging.set_verbosity(logging.INFO)
   gin.parse_config_files_and_bindings(FLAGS.gin_file, FLAGS.gin_bindings)
-  if FLAGS.sub_dir == 'auto':
-    sub_dir = utils.get_datetime()
-  else:
-    sub_dir = FLAGS.sub_dir
+  sub_dir = utils.get_datetime() if FLAGS.sub_dir == 'auto' else FLAGS.sub_dir
   log_dir = os.path.join(
       FLAGS.root_dir,
       FLAGS.env_name,

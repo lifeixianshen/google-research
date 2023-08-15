@@ -30,10 +30,7 @@ from tensorflow import gfile
 
 def parse_index_file(filename):
   """Parse index file."""
-  index = []
-  for line in gfile.Open(filename):
-    index.append(int(line.strip()))
-  return index
+  return [int(line.strip()) for line in gfile.Open(filename)]
 
 
 def sample_mask(idx, l):
@@ -107,13 +104,13 @@ def calc_f1(y_pred, y_true, multilabel):
 
 def construct_feed_dict(features, support, labels, labels_mask, placeholders):
   """Construct feed dictionary."""
-  feed_dict = dict()
-  feed_dict.update({placeholders['labels']: labels})
-  feed_dict.update({placeholders['labels_mask']: labels_mask})
-  feed_dict.update({placeholders['features']: features})
-  feed_dict.update({placeholders['support']: support})
-  feed_dict.update({placeholders['num_features_nonzero']: features[1].shape})
-  return feed_dict
+  return {
+      placeholders['labels']: labels,
+      placeholders['labels_mask']: labels_mask,
+      placeholders['features']: features,
+      placeholders['support']: support,
+      placeholders['num_features_nonzero']: features[1].shape,
+  }
 
 
 def preprocess_multicluster(adj,
@@ -132,7 +129,7 @@ def preprocess_multicluster(adj,
   train_mask_batches = []
   total_nnz = 0
   np.random.shuffle(parts)
-  for _, st in enumerate(range(0, num_clusters, block_size)):
+  for st in range(0, num_clusters, block_size):
     pt = parts[st]
     for pt_idx in range(st + 1, min(st + block_size, num_clusters)):
       pt = np.concatenate((pt, parts[pt_idx]), axis=0)
@@ -146,10 +143,7 @@ def preprocess_multicluster(adj,
           sparse_to_tuple(normalize_adj_diag_enhance(support_now, diag_lambda)))
     total_nnz += support_now.count_nonzero()
 
-    train_pt = []
-    for newidx, idx in enumerate(pt):
-      if train_mask[idx]:
-        train_pt.append(newidx)
+    train_pt = [newidx for newidx, idx in enumerate(pt) if train_mask[idx]]
     train_mask_batches.append(sample_mask(train_pt, len(pt)))
   return (features_batches, support_batches, y_train_batches,
           train_mask_batches)
@@ -185,10 +179,7 @@ def preprocess(adj,
     support_batches.append(sparse_to_tuple(now_part))
     y_train_batches.append(y_train[pt, :])
 
-    train_pt = []
-    for newidx, idx in enumerate(pt):
-      if train_mask[idx]:
-        train_pt.append(newidx)
+    train_pt = [newidx for newidx, idx in enumerate(pt) if train_mask[idx]]
     train_mask_batches.append(sample_mask(train_pt, len(pt)))
   return (parts, features_batches, support_batches, y_train_batches,
           train_mask_batches)
@@ -265,12 +256,12 @@ def load_graphsage_data(dataset_path, dataset_str, normalize=True):
   if isinstance(list(class_map.values())[0], list):
     num_classes = len(list(class_map.values())[0])
     labels = np.zeros((num_data, num_classes), dtype=np.float32)
-    for k in class_map.keys():
+    for k in class_map:
       labels[id_map[k], :] = np.array(class_map[k])
   else:
     num_classes = len(set(class_map.values()))
     labels = np.zeros((num_data, num_classes), dtype=np.float32)
-    for k in class_map.keys():
+    for k in class_map:
       labels[id_map[k], class_map[k]] = 1
 
   if normalize:

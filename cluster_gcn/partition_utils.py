@@ -28,12 +28,11 @@ def partition_graph(adj, idx_nodes, num_clusters):
   num_nodes = len(idx_nodes)
   num_all_nodes = adj.shape[0]
 
-  neighbor_intervals = []
   neighbors = []
   edge_cnt = 0
-  neighbor_intervals.append(0)
+  neighbor_intervals = [0]
   train_adj_lil = adj[idx_nodes, :][:, idx_nodes].tolil()
-  train_ord_map = dict()
+  train_ord_map = {}
   train_adj_lists = [[] for _ in range(num_nodes)]
   for i in range(num_nodes):
     rows = train_adj_lil[i].rows[0]

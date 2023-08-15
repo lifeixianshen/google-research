@@ -43,11 +43,7 @@ def sparse_dropout(x, keep_prob, noise_shape):
 
 def dot(x, y, sparse=False):
   """Wrapper for tf.matmul (sparse vs dense)."""
-  if sparse:
-    res = tf.sparse_tensor_dense_matmul(x, y)
-  else:
-    res = tf.matmul(x, y)
-  return res
+  return tf.sparse_tensor_dense_matmul(x, y) if sparse else tf.matmul(x, y)
 
 
 def layernorm(x, offset, scale):
@@ -74,12 +70,12 @@ class Layer(object):
 
   def __init__(self, **kwargs):
     allowed_kwargs = {'name', 'logging'}
-    for kwarg, _ in kwargs.items():
-      assert kwarg in allowed_kwargs, 'Invalid keyword argument: ' + kwarg
+    for kwarg in kwargs:
+      assert kwarg in allowed_kwargs, f'Invalid keyword argument: {kwarg}'
     name = kwargs.get('name')
     if not name:
       layer = self.__class__.__name__.lower()
-      name = layer + '_' + str(get_layer_uid(layer))
+      name = f'{layer}_{str(get_layer_uid(layer))}'
     self.name = name
     self.vars = {}
     logging = kwargs.get('logging', False)
@@ -92,15 +88,15 @@ class Layer(object):
   def __call__(self, inputs):
     with tf.name_scope(self.name):
       if self.logging and not self.sparse_inputs:
-        tf.summary.histogram(self.name + '/inputs', inputs)
+        tf.summary.histogram(f'{self.name}/inputs', inputs)
       outputs = self._call(inputs)
       if self.logging:
-        tf.summary.histogram(self.name + '/outputs', outputs)
+        tf.summary.histogram(f'{self.name}/outputs', outputs)
       return outputs
 
   def _log_vars(self):
     for var in self.vars:
-      tf.summary.histogram(self.name + '/vars/' + var, self.vars[var])
+      tf.summary.histogram(f'{self.name}/vars/{var}', self.vars[var])
 
 
 class Dense(Layer):
@@ -119,11 +115,7 @@ class Dense(Layer):
                **kwargs):
     super(Dense, self).__init__(**kwargs)
 
-    if dropout:
-      self.dropout = placeholders['dropout']
-    else:
-      self.dropout = 0.
-
+    self.dropout = placeholders['dropout'] if dropout else 0.
     self.act = act
     self.sparse_inputs = sparse_inputs
     self.featureless = featureless
@@ -133,7 +125,7 @@ class Dense(Layer):
     # helper variable for sparse dropout
     self.num_features_nonzero = placeholders['num_features_nonzero']
 
-    with tf.variable_scope(self.name + '_vars'):
+    with tf.variable_scope(f'{self.name}_vars'):
       self.vars['weights'] = inits.glorot([input_dim, output_dim],
                                           name='weights')
       if self.bias:
@@ -162,7 +154,7 @@ class Dense(Layer):
     if self.bias:
       output += self.vars['bias']
 
-    with tf.variable_scope(self.name + '_vars'):
+    with tf.variable_scope(f'{self.name}_vars'):
       if self.norm:
         output = layernorm(output, self.vars['offset'], self.vars['scale'])
 
@@ -186,11 +178,7 @@ class GraphConvolution(Layer):
                **kwargs):
     super(GraphConvolution, self).__init__(**kwargs)
 
-    if dropout:
-      self.dropout = placeholders['dropout']
-    else:
-      self.dropout = 0.
-
+    self.dropout = placeholders['dropout'] if dropout else 0.
     self.act = act
     self.support = placeholders['support']
     self.sparse_inputs = sparse_inputs
@@ -202,7 +190,7 @@ class GraphConvolution(Layer):
     # helper variable for sparse dropout
     self.num_features_nonzero = placeholders['num_features_nonzero']
 
-    with tf.variable_scope(self.name + '_vars'):
+    with tf.variable_scope(f'{self.name}_vars'):
       self.vars['weights'] = inits.glorot([input_dim, output_dim],
                                           name='weights')
       if self.bias:
@@ -234,7 +222,7 @@ class GraphConvolution(Layer):
     if self.bias:
       output += self.vars['bias']
 
-    with tf.variable_scope(self.name + '_vars'):
+    with tf.variable_scope(f'{self.name}_vars'):
       if self.norm:
         output = layernorm(output, self.vars['offset'], self.vars['scale'])
 

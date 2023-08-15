@@ -158,9 +158,8 @@ def _internal_bi_tempered_logistic_loss(activations, labels, t1, t2):
       return normalization_constants + tf.reduce_sum(
           tf.multiply(labels, tf.log(labels + 1e-10) - activations), -1,
           keep_dims=True)
-    else:
-      shifted_activations = tf.exp(activations - normalization_constants)
-      one_minus_t2 = 1.0
+    shifted_activations = tf.exp(activations - normalization_constants)
+    one_minus_t2 = 1.0
   else:
     one_minus_t1 = (1.0 - t1)
     one_minus_t2 = (1.0 - t2)
@@ -176,14 +175,13 @@ def _internal_bi_tempered_logistic_loss(activations, labels, t1, t2):
             tf.log(tf.pow(shifted_activations, 1.0 / one_minus_t2)), labels),
         -1,
         keep_dims=True)
-  else:
-    beta = 1.0 + one_minus_t1
-    logt_probs = (tf.pow(shifted_activations, one_minus_t1 / one_minus_t2) -
-                  1.0) / one_minus_t1
-    return tf.reduce_sum(
-        tf.multiply(log_t(labels, t1) - logt_probs, labels) - 1.0 / beta *
-        (tf.pow(labels, beta) -
-         tf.pow(shifted_activations, beta / one_minus_t2)), -1)
+  beta = 1.0 + one_minus_t1
+  logt_probs = (tf.pow(shifted_activations, one_minus_t1 / one_minus_t2) -
+                1.0) / one_minus_t1
+  return tf.reduce_sum(
+      tf.multiply(log_t(labels, t1) - logt_probs, labels) - 1.0 / beta *
+      (tf.pow(labels, beta) -
+       tf.pow(shifted_activations, beta / one_minus_t2)), -1)
 
 
 def tempered_sigmoid(activations, t, num_iters=5):

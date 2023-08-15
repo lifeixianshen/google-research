@@ -71,13 +71,13 @@ class Preprocessor(object):
   def _serialize_dataset(self, tasks, is_training, split):
     """Writes out tfrecord examples for the specified tasks."""
     dataset_name = "_".join(sorted([task.name for task in tasks]))
-    dataset_name += "_" + split
+    dataset_name += f"_{split}"
     if self._config.distill:
       dataset_name += "_distill"
     dataset_prefix = os.path.join(
         self._config.preprocessed_data_dir, dataset_name)
-    tfrecords_path = dataset_prefix + ".tfrecord"
-    metadata_path = dataset_prefix + ".metadata"
+    tfrecords_path = f"{dataset_prefix}.tfrecord"
+    metadata_path = f"{dataset_prefix}.metadata"
     batch_size = (self._config.train_batch_size if is_training else
                   self._config.eval_batch_size)
 
@@ -142,13 +142,9 @@ class Preprocessor(object):
         raise ValueError("Unknown feature", k)
     features = collections.OrderedDict()
     for spec in self._feature_specs:
-      if spec.name in kwargs:
-        values = kwargs[spec.name]
-      else:
-        values = spec.get_default_value()
-      if (isinstance(values, int) or isinstance(values, bool) or
-          isinstance(values, float) or isinstance(values, np.float32) or
-          (isinstance(values, np.ndarray) and values.size == 1)):
+      values = kwargs[spec.name] if spec.name in kwargs else spec.get_default_value()
+      if isinstance(values, (int, bool, float, np.float32)) or (isinstance(
+          values, np.ndarray) and values.size == 1):
         values = [values]
       if spec.is_int_feature:
         feature = tf.train.Feature(int64_list=tf.train.Int64List(
@@ -182,8 +178,5 @@ class Preprocessor(object):
     # tf.Example only supports tf.int64, but the TPU only supports tf.int32.
     # So cast all int64 to int32.
     for name, tensor in example.items():
-      if tensor.dtype == tf.int64:
-        example[name] = tf.to_int32(tensor)
-      else:
-        example[name] = tensor
+      example[name] = tf.to_int32(tensor) if tensor.dtype == tf.int64 else tensor
     return example

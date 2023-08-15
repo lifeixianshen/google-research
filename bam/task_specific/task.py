@@ -43,17 +43,19 @@ class Task(object):
     self.long_sequences = long_sequences
 
   def get_examples(self, split):
-    return self.load_data(split + ".tsv", split)
+    return self.load_data(f"{split}.tsv", split)
 
   def get_test_splits(self):
     return ["test"]
 
   def load_data(self, fname, split):
-    examples = self._create_examples(
-        read_tsv(os.path.join(self.config.raw_data_dir(self.name), fname),
-                 max_lines=50 if self.config.debug else None),
-        split)
-    return examples
+    return self._create_examples(
+        read_tsv(
+            os.path.join(self.config.raw_data_dir(self.name), fname),
+            max_lines=50 if self.config.debug else None,
+        ),
+        split,
+    )
 
   @abc.abstractmethod
   def _create_examples(self, lines, split):
@@ -77,7 +79,7 @@ class Task(object):
     pass
 
   def __repr__(self):
-    return "Task(" + self.name + ")"
+    return f"Task({self.name})"
 
 
 def read_tsv(input_file, quotechar=None, max_lines=None):

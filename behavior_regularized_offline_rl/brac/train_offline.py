@@ -75,19 +75,16 @@ def main(_):
       data_dir, FLAGS.data_file_name)
 
   # Setup log dir.
-  if FLAGS.sub_dir == 'auto':
-    sub_dir = utils.get_datetime()
-  else:
-    sub_dir = FLAGS.sub_dir
+  sub_dir = utils.get_datetime() if FLAGS.sub_dir == 'auto' else FLAGS.sub_dir
   log_dir = os.path.join(
       FLAGS.root_dir,
       FLAGS.env_name,
       FLAGS.data_name,
-      'n'+str(FLAGS.n_train),
+      f'n{str(FLAGS.n_train)}',
       FLAGS.agent_name,
       sub_dir,
       str(FLAGS.seed),
-      )
+  )
   utils.maybe_makedirs(log_dir)
   train_eval_offline.train_eval_offline(
       log_dir=log_dir,

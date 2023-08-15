@@ -360,7 +360,7 @@ def conv_capsule_mat(input_tensor,
                      min_var=0.0005,
                      final_beta=1.0):
   """Convolutional Capsule layer with Pose Matrices."""
-  print('caps conv stride: {}'.format(stride))
+  print(f'caps conv stride: {stride}')
   in_atom_sq = num_in_atoms * num_in_atoms
   with tf.variable_scope(layer_name):
     input_shape = tf.shape(input_tensor)

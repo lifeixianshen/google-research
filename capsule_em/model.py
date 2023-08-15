@@ -141,8 +141,7 @@ def multi_gpu_model(features):
     if FLAGS.verbose:
       for grad, var in grads:
         if grad is not None:
-          summaries.append(
-              tf.summary.histogram(var.op.name + '/gradients', grad))
+          summaries.append(tf.summary.histogram(f'{var.op.name}/gradients', grad))
     summaries.append(tf.summary.scalar('learning_rate', lr))
     result['summary'] = tf.summary.merge(summaries)
     result['train'] = opt.apply_gradients(grads, global_step=global_step)

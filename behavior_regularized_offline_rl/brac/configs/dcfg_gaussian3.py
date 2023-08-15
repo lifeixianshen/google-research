@@ -39,9 +39,8 @@ def get_data_config(env_name, policy_root_dir=None):
   randwalk = ['randwalk', '', ['none'], ()]
   p1_pure = ['load', ckpt_file, ['none',], model_params]
   p1_gaussian = ['load', ckpt_file, ['gaussian', 0.3], model_params]
-  data_config = [
+  return [
       ['randwalk', randwalk, 2],
       ['p1_pure', p1_pure, 4],
       ['p1_gaussian', p1_gaussian, 4],
   ]
-  return data_config

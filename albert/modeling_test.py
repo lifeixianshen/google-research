@@ -110,13 +110,12 @@ class AlbertModelTest(tf.test.TestCase):
           token_type_ids=token_type_ids,
           scope=self.scope)
 
-      outputs = {
+      return {
           "embedding_output": model.get_embedding_output(),
           "sequence_output": model.get_sequence_output(),
           "pooled_output": model.get_pooled_output(),
           "all_encoder_layers": model.get_all_encoder_layers(),
       }
-      return outputs
 
     def check_output(self, result):
       self.parent.assertAllEqual(
@@ -160,10 +159,7 @@ class AlbertModelTest(tf.test.TestCase):
     for dim in shape:
       total_dims *= dim
 
-    values = []
-    for _ in range(total_dims):
-      values.append(rng.randint(0, vocab_size - 1))
-
+    values = [rng.randint(0, vocab_size - 1) for _ in range(total_dims)]
     return tf.constant(value=values, dtype=tf.int32, shape=shape, name=name)
 
   def assert_all_tensors_reachable(self, sess, outputs):
@@ -194,8 +190,10 @@ class AlbertModelTest(tf.test.TestCase):
     unreachable = filtered_unreachable
 
     self.assertEqual(
-        len(unreachable), 0, "The following ops are unreachable: %s" %
-        (" ".join([x.name for x in unreachable])))
+        len(unreachable),
+        0,
+        f'The following ops are unreachable: {" ".join([x.name for x in unreachable])}',
+    )
 
   @classmethod
   def get_unreachable_ops(cls, graph, outputs):
@@ -242,20 +240,15 @@ class AlbertModelTest(tf.test.TestCase):
 
       expanded_names = []
       if name in assign_groups:
-        for assign_name in assign_groups[name]:
-          expanded_names.append(assign_name)
-
+        expanded_names.extend(iter(assign_groups[name]))
       for expanded_name in expanded_names:
         if expanded_name not in stack:
           stack.append(expanded_name)
 
     unreachable_ops = []
     for op in graph.get_operations():
-      is_unreachable = False
       all_names = [x.name for x in op.inputs] + [x.name for x in op.outputs]
-      for name in all_names:
-        if name not in seen_tensors:
-          is_unreachable = True
+      is_unreachable = any(name not in seen_tensors for name in all_names)
       if is_unreachable:
         unreachable_ops.append(op)
     return unreachable_ops
@@ -269,8 +262,7 @@ class AlbertModelTest(tf.test.TestCase):
     elif isinstance(item, tuple):
       output.extend(list(item))
     elif isinstance(item, dict):
-      for (_, v) in six.iteritems(item):
-        output.append(v)
+      output.extend(v for _, v in six.iteritems(item))
     else:
       return [item]
 

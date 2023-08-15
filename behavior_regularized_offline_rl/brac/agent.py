@@ -110,15 +110,14 @@ class Agent(object):
     batch_indices = np.random.choice(self._train_data.size, self._batch_size)
     batch_ = self._train_data.get_batch(batch_indices)
     transition_batch = batch_
-    batch = dict(
+    return dict(
         s1=transition_batch.s1,
         s2=transition_batch.s2,
         r=transition_batch.reward,
         dsc=transition_batch.discount,
         a1=transition_batch.a1,
         a2=transition_batch.a2,
-        )
-    return batch
+    )
 
   def _optimize_step(self, batch):
     with tf.GradientTape() as tape:

@@ -67,7 +67,7 @@ def wrap_policy(a_net, wrapper):
 def load_policy(policy_cfg, action_spec):
   """Loads policy based on config."""
   if policy_cfg.ptype not in PTYPES:
-    raise ValueError('Unknown policy type %s.' % policy_cfg.ptype)
+    raise ValueError(f'Unknown policy type {policy_cfg.ptype}.')
   if policy_cfg.ptype == 'randwalk':
     policy = policies.ContinuousRandomPolicy(action_spec)
   elif policy_cfg.ptype in ['randinit', 'load']:

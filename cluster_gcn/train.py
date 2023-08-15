@@ -106,11 +106,10 @@ def evaluate(sess, model, val_features_batches, val_support_batches,
     num_data_b = np.sum(val_mask_b)
     if num_data_b == 0:
       continue
-    else:
-      feed_dict = utils.construct_feed_dict(features_b, support_b, y_val_b,
-                                            val_mask_b, placeholders)
-      outs = sess.run([model.loss, model.accuracy, model.outputs],
-                      feed_dict=feed_dict)
+    feed_dict = utils.construct_feed_dict(features_b, support_b, y_val_b,
+                                          val_mask_b, placeholders)
+    outs = sess.run([model.loss, model.accuracy, model.outputs],
+                    feed_dict=feed_dict)
 
     total_pred.append(outs[2][val_mask_b])
     total_lab.append(y_val_b[val_mask_b])

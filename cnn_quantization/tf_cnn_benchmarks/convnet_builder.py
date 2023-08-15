@@ -86,8 +86,7 @@ class ConvNetBuilder(object):
       if not self.use_tf_layers:
         return getter(*args, **kwargs)
       requested_dtype = kwargs['dtype']
-      if not (requested_dtype == tf.float32 and
-              self.variable_dtype == tf.float16):
+      if requested_dtype != tf.float32 or self.variable_dtype != tf.float16:
         # Only change the variable dtype if doing so does not decrease variable
         # precision.
         kwargs['dtype'] = self.variable_dtype
@@ -100,6 +99,7 @@ class ConvNetBuilder(object):
       if var.dtype.base_dtype != requested_dtype:
         var = tf.cast(var, requested_dtype)
       return var
+
     return inner_custom_getter
 
   @contextlib.contextmanager
@@ -209,7 +209,7 @@ class ConvNetBuilder(object):
       else:
         act = tf.maximum(tf.minimum(act, x), 0)
       if self.params.quant_act:
-        print('Quantizing activation %s' % act.name)
+        print(f'Quantizing activation {act.name}')
         if self.params.relu_x_per_channel:
           zeros = tf.constant(0, dtype=tf.float32, shape=shape)
         else:
@@ -236,27 +236,27 @@ class ConvNetBuilder(object):
 
     tanh_weights = tf.tanh(weights)
     if per_channel:
-      if weights_dim == 4:
-        max_per_channel = tf.reduce_max(tf.abs(tanh_weights), axis=[0, 1, 2])
-        norm_weights = tanh_weights/tf.reshape(max_per_channel, [1, 1, 1, -1])
-      elif weights_dim == 2:
+      if weights_dim == 2:
         max_per_channel = tf.reduce_max(tf.abs(tanh_weights), axis=[0])
         norm_weights = tanh_weights/tf.reshape(max_per_channel, [1, -1])
+      elif weights_dim == 4:
+        max_per_channel = tf.reduce_max(tf.abs(tanh_weights), axis=[0, 1, 2])
+        norm_weights = tanh_weights/tf.reshape(max_per_channel, [1, 1, 1, -1])
     else:
       norm_weights = tanh_weights/tf.reduce_max(tf.abs(tanh_weights))
     if not quantize:
       return norm_weights
     quant_max = tf.constant(1.0, dtype=tf.float32)
     quant_min = tf.constant(-1.0, dtype=tf.float32)
-    quant_weights = self.delayed_quant(
+    return self.delayed_quant(
         norm_weights,
         quant_min,
         quant_max,
         per_channel=False,
         num_bits=num_bits,
         narrow_range=True,
-        quant_delay=quant_delay)
-    return quant_weights
+        quant_delay=quant_delay,
+    )
 
   def last_value_quantize(self,
                           inputs,
@@ -306,13 +306,13 @@ class ConvNetBuilder(object):
     """
 
     with tf.variable_scope(
-        None, default_name=name_prefix, values=[inputs], reuse=reuse) as scope:
+          None, default_name=name_prefix, values=[inputs], reuse=reuse) as scope:
       scope.set_partitioner(None)
       input_shape = inputs.get_shape()
       input_dim = len(input_shape)
       if per_channel:
         # Only support quantizing 1-, 2- and 4-dimensional tensors.
-        assert input_dim in [1, 2, 4]
+        assert input_dim in {1, 2, 4}
         min_max_shape = [input_shape[-1]]
       else:
         min_max_shape = []
@@ -368,11 +368,7 @@ class ConvNetBuilder(object):
         batch_max = tfp.stats.percentile(
             inputs, q=100 - quantile, name='BatchMax')
 
-      if narrow_range:
-        multiplier = 1.0
-      else:
-        multiplier = 1.0 + 1.0 / (2.0**(num_bits-1.0) - 1.0)
-
+      multiplier = 1.0 if narrow_range else 1.0 + 1.0 / (2.0**(num_bits-1.0) - 1.0)
       batch_abs_max = tf.maximum(tf.abs(batch_min), tf.abs(batch_max))
 
       if narrow_range:
@@ -421,7 +417,7 @@ class ConvNetBuilder(object):
                    strides, padding, kernel_initializer):
     """Construct a custom convolution layer."""
     if self.use_tf_layers:
-      assert not (self.params.tanh_weight_transform or self.params.quant_weight)
+      assert not self.params.tanh_weight_transform and not self.params.quant_weight
       return conv_layers.conv2d(input_layer, filters, kernel_size, strides,
                                 padding, self.channel_pos,
                                 kernel_initializer=kernel_initializer,
@@ -436,9 +432,9 @@ class ConvNetBuilder(object):
                                   self.variable_dtype, self.dtype,
                                   initializer=kernel_initializer)
       if self.params.tanh_weight_transform:
-        if not (self.params.first_weight_name in weights.name
-                or self.params.last_weight_name in weights.name):
-          print('Dorefa quantizing weight %s' % weights.name)
+        if (self.params.first_weight_name not in weights.name
+            and self.params.last_weight_name not in weights.name):
+          print(f'Dorefa quantizing weight {weights.name}')
           weights = self.dorefa_weight_quantize(
               weights,
               self.params.quant_weight,
@@ -446,9 +442,9 @@ class ConvNetBuilder(object):
               self.params.quant_weight_per_channel,
               self.params.quant_weight_delay)
       elif self.params.quant_weight:
-        if not (self.params.first_weight_name in weights.name
-                or self.params.last_weight_name in weights.name):
-          print('Quantizing weight %s' % weights.name)
+        if (self.params.first_weight_name not in weights.name
+            and self.params.last_weight_name not in weights.name):
+          print(f'Quantizing weight {weights.name}')
           weights = self.last_value_quantize(
               weights,
               per_channel=self.params.quant_weight_per_channel,
@@ -500,31 +496,30 @@ class ConvNetBuilder(object):
                                  kernel_size=[k_height, k_width],
                                  strides=[d_height, d_width], padding=mode,
                                  kernel_initializer=kernel_initializer)
-      else:  # Special padding mode for ResNet models
-        if d_height == 1 and d_width == 1:
-          conv = self._conv2d_impl(input_layer, num_channels_in,
-                                   num_out_channels,
-                                   kernel_size=[k_height, k_width],
-                                   strides=[d_height, d_width], padding='SAME',
-                                   kernel_initializer=kernel_initializer)
-        else:
-          rate = 1  # Unused (for 'a trous' convolutions)
-          kernel_height_effective = k_height + (k_height - 1) * (rate - 1)
-          pad_h_beg = (kernel_height_effective - 1) // 2
-          pad_h_end = kernel_height_effective - 1 - pad_h_beg
-          kernel_width_effective = k_width + (k_width - 1) * (rate - 1)
-          pad_w_beg = (kernel_width_effective - 1) // 2
-          pad_w_end = kernel_width_effective - 1 - pad_w_beg
-          padding = [[0, 0], [pad_h_beg, pad_h_end],
-                     [pad_w_beg, pad_w_end], [0, 0]]
-          if self.data_format == 'NCHW':
-            padding = [padding[0], padding[3], padding[1], padding[2]]
-          padded_input_layer = tf.pad(input_layer, padding)
-          conv = self._conv2d_impl(padded_input_layer, num_channels_in,
-                                   num_out_channels,
-                                   kernel_size=[k_height, k_width],
-                                   strides=[d_height, d_width], padding='VALID',
-                                   kernel_initializer=kernel_initializer)
+      elif d_height == 1 and d_width == 1:
+        conv = self._conv2d_impl(input_layer, num_channels_in,
+                                 num_out_channels,
+                                 kernel_size=[k_height, k_width],
+                                 strides=[d_height, d_width], padding='SAME',
+                                 kernel_initializer=kernel_initializer)
+      else:
+        rate = 1  # Unused (for 'a trous' convolutions)
+        kernel_height_effective = k_height + (k_height - 1) * (rate - 1)
+        pad_h_beg = (kernel_height_effective - 1) // 2
+        pad_h_end = kernel_height_effective - 1 - pad_h_beg
+        kernel_width_effective = k_width + (k_width - 1) * (rate - 1)
+        pad_w_beg = (kernel_width_effective - 1) // 2
+        pad_w_end = kernel_width_effective - 1 - pad_w_beg
+        padding = [[0, 0], [pad_h_beg, pad_h_end],
+                   [pad_w_beg, pad_w_end], [0, 0]]
+        if self.data_format == 'NCHW':
+          padding = [padding[0], padding[3], padding[1], padding[2]]
+        padded_input_layer = tf.pad(input_layer, padding)
+        conv = self._conv2d_impl(padded_input_layer, num_channels_in,
+                                 num_out_channels,
+                                 kernel_size=[k_height, k_width],
+                                 strides=[d_height, d_width], padding='VALID',
+                                 kernel_initializer=kernel_initializer)
       if use_batch_norm is None:
         use_batch_norm = self.use_batch_norm
       mlperf.logger.log_conv2d(input_tensor=input_layer, output_tensor=conv,
@@ -532,20 +527,19 @@ class ConvNetBuilder(object):
                                filters=num_out_channels,
                                initializer=kernel_initializer,
                                use_bias=not use_batch_norm and bias is not None)
-      if not use_batch_norm:
-        if bias is not None:
-          biases = self.get_variable('biases', [num_out_channels],
-                                     self.variable_dtype, self.dtype,
-                                     initializer=tf.constant_initializer(bias))
-          biased = tf.reshape(
-              tf.nn.bias_add(conv, biases, data_format=self.data_format),
-              conv.get_shape())
-        else:
-          biased = conv
-      else:
+      if use_batch_norm:
         self.top_layer = conv
         self.top_size = num_out_channels
         biased = self.batch_norm(**self.batch_norm_config)
+      elif bias is not None:
+        biases = self.get_variable('biases', [num_out_channels],
+                                   self.variable_dtype, self.dtype,
+                                   initializer=tf.constant_initializer(bias))
+        biased = tf.reshape(
+            tf.nn.bias_add(conv, biases, data_format=self.data_format),
+            conv.get_shape())
+      else:
+        biased = conv
       if activation == 'relu':
         mlperf.logger.log(key=mlperf.tags.MODEL_HP_RELU)
         conv1 = self.relu(biased)
@@ -652,9 +646,9 @@ class ConvNetBuilder(object):
           initializer=tf.truncated_normal_initializer(stddev=stddev))
 
       if self.params.tanh_weight_transform:
-        if not (self.params.first_weight_name in kernel.name
-                or self.params.last_weight_name in kernel.name):
-          print('Dorefa quantizing weight %s' % kernel.name)
+        if (self.params.first_weight_name not in kernel.name
+            and self.params.last_weight_name not in kernel.name):
+          print(f'Dorefa quantizing weight {kernel.name}')
           kernel = self.dorefa_weight_quantize(
               kernel,
               self.params.quant_weight,
@@ -662,9 +656,9 @@ class ConvNetBuilder(object):
               self.params.quant_weight_per_channel,
               self.params.quant_weight_delay)
       elif self.params.quant_weight:
-        if not (self.params.first_weight_name in kernel.name
-                or self.params.last_weight_name in kernel.name):
-          print('Quantizing weight %s' % kernel.name)
+        if (self.params.first_weight_name not in kernel.name
+            and self.params.last_weight_name not in kernel.name):
+          print(f'Quantizing weight {kernel.name}')
           kernel = self.last_value_quantize(
               kernel,
               per_channel=self.params.quant_weight_per_channel,
@@ -731,7 +725,7 @@ class ConvNetBuilder(object):
           col_layer_sizes[c].append(self.top_size)
       catdim = 3 if self.data_format == 'NHWC' else 1
       self.top_layer = tf.concat([layers[-1] for layers in col_layers], catdim)
-      self.top_size = sum([sizes[-1] for sizes in col_layer_sizes])
+      self.top_size = sum(sizes[-1] for sizes in col_layer_sizes)
       return self.top_layer
 
   def spatial_mean(self, keep_dims=False):

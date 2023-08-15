@@ -221,7 +221,7 @@ class Agent(agent.Agent):
     if len(opts) == 1:
       opts = tuple([opts[0]] * 3)
     elif len(opts) < 3:
-      raise ValueError('Bad optimizers %s.' % opts)
+      raise ValueError(f'Bad optimizers {opts}.')
     self._q_optimizer = utils.get_optimizer(opts[0][0])(lr=opts[0][1])
     self._p_optimizer = utils.get_optimizer(opts[1][0])(lr=opts[1][1])
     self._a_optimizer = utils.get_optimizer(opts[2][0])(lr=opts[2][1])
@@ -340,11 +340,10 @@ class AgentModule(agent.AgentModule):
   def _build_modules(self):
     self._q_nets = []
     n_q_fns = self._modules.n_q_fns
-    for _ in range(n_q_fns):
-      self._q_nets.append(
-          [self._modules.q_net_factory(),
-           self._modules.q_net_factory(),]  # source and target
-          )
+    self._q_nets.extend([
+        self._modules.q_net_factory(),
+        self._modules.q_net_factory(),
+    ] for _ in range(n_q_fns))
     self._p_net = self._modules.p_net_factory()
     self._b_net = self._modules.p_net_factory()
     self._alpha_var = tf.Variable(1.0)
@@ -426,14 +425,16 @@ def get_modules(model_params, action_spec):
   if len(model_params) == 1:
     model_params = tuple([model_params[0]] * 2)
   elif len(model_params) < 2:
-    raise ValueError('Bad model parameters %s.' % model_params)
+    raise ValueError(f'Bad model parameters {model_params}.')
   def q_net_factory():
     return networks.CriticNetwork(
         fc_layer_params=model_params[0])
+
   def p_net_factory():
     return networks.ActorNetwork(
         action_spec,
         fc_layer_params=model_params[1])
+
   modules = utils.Flags(
       q_net_factory=q_net_factory,
       p_net_factory=p_net_factory,

@@ -72,8 +72,6 @@ def variable_summaries(var):
       tf.summary.scalar('max', tf.reduce_max(var))
       tf.summary.scalar('min', tf.reduce_min(var))
       tf.summary.histogram('histogram', var)
-  else:
-    pass
 
 
 def activation_summary(x):
@@ -90,8 +88,6 @@ def activation_summary(x):
   if FLAGS.verbose:
     tf.summary.histogram('activation', x)
     tf.summary.scalar('sparsity', tf.nn.zero_fraction(x))
-  else:
-    pass
 
 
 def loss_summaries(total_loss):
@@ -115,7 +111,7 @@ def loss_summaries(total_loss):
   for l in losses + [total_loss]:
     # Name each loss as '(raw)' and name the moving average version of the loss
     # as the original loss name.
-    tf.summary.scalar(l.op.name + ' (raw)', l)
+    tf.summary.scalar(f'{l.op.name} (raw)', l)
     tf.summary.scalar(l.op.name, loss_averages.average(l))
 
   return loss_averages_op

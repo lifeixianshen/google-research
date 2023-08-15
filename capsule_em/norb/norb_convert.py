@@ -64,12 +64,9 @@ def write_record(dataset, filename):
 
 
 def get_path(split, filetype):
-  if split == 'train':
-    instance_list = '46789'
-  else:
-    instance_list = '01235'
-  filename = 'smallnorb-5x%sx9x18x6x2x96x96-%s-%s.mat' % (
-      instance_list, split + 'ing', filetype)
+  instance_list = '46789' if split == 'train' else '01235'
+  filename = (
+      f'smallnorb-5x{instance_list}x9x18x6x2x96x96-{split}ing-{filetype}.mat')
   return os.path.join(FLAGS.data_dir, filename)
 
 
@@ -93,17 +90,18 @@ def read_header(file_handle):
   type_key = read_nums(file_handle, 'int32', 1)[0]
   elem_type, elem_size = key_to_type[type_key]
   if FLAGS.debug:
-    print("header's type key, type, type size: {}, {}, {} ".format(
-        type_key, elem_type, elem_size))
+    print(
+        f"header's type key, type, type size: {type_key}, {elem_type}, {elem_size} "
+    )
 
   num_dims = read_nums(file_handle, 'int32', 1)[0]
   if FLAGS.debug:
-    print('# of dimensions, according to header: {}'.format(num_dims))
+    print(f'# of dimensions, according to header: {num_dims}')
   shape = np.fromfile(
       file_handle, dtype='int32', count=max(num_dims, 3))[:num_dims]
 
   if FLAGS.debug:
-    print('Tensor shape, as listed in header: {}'.format(shape))
+    print(f'Tensor shape, as listed in header: {shape}')
 
   return elem_type, elem_size, shape
 
@@ -114,9 +112,8 @@ def parse_norb_file(file_handle):
 
   num_elems = np.prod(shape)
 
-  result = np.fromfile(
-      file_handle, dtype=elem_type, count=num_elems).reshape(shape)
-  return result
+  return np.fromfile(file_handle, dtype=elem_type,
+                     count=num_elems).reshape(shape)
 
 
 def main(_):
@@ -128,8 +125,7 @@ def main(_):
     dataset['labels'] = parse_norb_file(file_handle)
     file_handle = open(get_path(s, 'info'))
     dataset['meta'] = parse_norb_file(file_handle)
-    write_record(dataset,
-                 os.path.join(FLAGS.data_dir, '{}duo.tfrecords'.format(s)))
+    write_record(dataset, os.path.join(FLAGS.data_dir, f'{s}duo.tfrecords'))
 
 
 if __name__ == '__main__':

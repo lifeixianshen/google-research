@@ -59,8 +59,7 @@ def gather_indexes(sequence_tensor, positions):
   flat_positions = tf.reshape(positions + flat_offsets, [-1])
   flat_sequence_tensor = tf.reshape(sequence_tensor,
                                     [batch_size * seq_length, width])
-  output_tensor = tf.gather(flat_sequence_tensor, flat_positions)
-  return output_tensor
+  return tf.gather(flat_sequence_tensor, flat_positions)
 
 
 def get_mlm_logits(model, albert_config, mlm_positions):
@@ -165,7 +164,7 @@ def main(_):
     tags_and_args.append((tags, dict(is_training=is_training)))
   spec = hub.create_module_spec(module_fn, tags_and_args=tags_and_args)
   checkpoint_path = os.path.join(FLAGS.albert_directory, FLAGS.checkpoint_name)
-  tf.logging.info("Using checkpoint {}".format(checkpoint_path))
+  tf.logging.info(f"Using checkpoint {checkpoint_path}")
   spec.export(FLAGS.export_path, checkpoint_path=checkpoint_path)
 
 

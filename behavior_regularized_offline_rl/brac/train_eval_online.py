@@ -155,28 +155,29 @@ def train_eval_online(
       # performance.
       if (eval_target is not None and len(eval_results) >= eval_target_n
           and not target_partial_policy_saved):
-        evals_ = list([eval_results[-(i + 1)][1]
-                       for i in range(eval_target_n)])
+        evals_ = [eval_results[-(i + 1)][1] for i in range(eval_target_n)]
         evals_ = np.array(evals_)
         if np.min(evals_) >= eval_target:
-          agent.save(agent_ckpt_name + '_partial_target')
-          dataset.save_copy(train_data, data_ckpt_name + '_partial_target')
+          agent.save(f'{agent_ckpt_name}_partial_target')
+          dataset.save_copy(train_data, f'{data_ckpt_name}_partial_target')
           logging.info('A partially trained policy was saved at step %d,'
                        ' with episodic return %.4g.', step, evals_[-1])
           target_partial_policy_saved = True
       logging.info('Testing at step %d:', step)
       for policy_key, policy_info in eval_infos.items():
-        logging.info(utils.get_summary_str(
-            step=None, info=policy_info, prefix=policy_key + ': '))
+        logging.info(
+            utils.get_summary_str(step=None,
+                                  info=policy_info,
+                                  prefix=f'{policy_key}: '))
         utils.write_summary(eval_summary_writers[policy_key], step, policy_info)
       time_st = time.time()
       timed_at_step = step
     if step % save_freq == 0:
-      agent.save(agent_ckpt_name + '-' + str(step))
+      agent.save(f'{agent_ckpt_name}-{str(step)}')
 
   # Final save after training.
-  agent.save(agent_ckpt_name + '_final')
-  data_ckpt.write(data_ckpt_name + '_final')
+  agent.save(f'{agent_ckpt_name}_final')
+  data_ckpt.write(f'{data_ckpt_name}_final')
   time_cost = time.time() - time_st_total
   logging.info('Training finished, time cost %.4gs.', time_cost)
   return np.array(eval_results)

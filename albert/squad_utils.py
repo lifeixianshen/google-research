@@ -86,15 +86,12 @@ class SquadExample(object):
 
   def __repr__(self):
     s = ""
-    s += "qas_id: %s" % (tokenization.printable_text(self.qas_id))
-    s += ", question_text: %s" % (
-        tokenization.printable_text(self.question_text))
-    s += ", paragraph_text: [%s]" % (" ".join(self.paragraph_text))
+    s += f"qas_id: {tokenization.printable_text(self.qas_id)}"
+    s += f", question_text: {tokenization.printable_text(self.question_text)}"
+    s += f', paragraph_text: [{" ".join(self.paragraph_text)}]'
     if self.start_position:
       s += ", start_position: %d" % (self.start_position)
-    if self.start_position:
       s += ", end_position: %d" % (self.end_position)
-    if self.start_position:
       s += ", is_impossible: %r" % (self.is_impossible)
     return s
 
@@ -191,28 +188,16 @@ def _convert_index(index, pos, m=None, is_start=True):
   assert index[front] is not None or index[rear] is not None
   if index[front] is None:
     if index[rear] >= 1:
-      if is_start:
-        return 0
-      else:
-        return index[rear] - 1
+      return 0 if is_start else index[rear] - 1
     return index[rear]
   if index[rear] is None:
     if m is not None and index[front] < m - 1:
-      if is_start:
-        return index[front] + 1
-      else:
-        return m - 1
+      return index[front] + 1 if is_start else m - 1
     return index[front]
   if is_start:
-    if index[rear] > index[front] + 1:
-      return index[front] + 1
-    else:
-      return index[rear]
+    return min(index[rear], index[front] + 1)
   else:
-    if index[rear] > index[front] + 1:
-      return index[rear] - 1
-    else:
-      return index[front]
+    return index[rear] - 1 if index[rear] > index[front] + 1 else index[front]
 
 
 def convert_examples_to_features(examples, tokenizer, max_seq_length,
@@ -237,7 +222,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             example.question_text, lower=do_lower_case))
 
     if len(query_tokens) > max_query_length:
-      query_tokens = query_tokens[0:max_query_length]
+      query_tokens = query_tokens[:max_query_length]
 
     paragraph_text = example.paragraph_text
     para_tokens = tokenization.encode_pieces(
@@ -450,8 +435,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
         doc_start = doc_span.start
         doc_end = doc_span.start + doc_span.length - 1
         out_of_span = False
-        if not (tok_start_position >= doc_start and
-                tok_end_position <= doc_end):
+        if tok_start_position < doc_start or tok_end_position > doc_end:
           out_of_span = True
         if out_of_span:
           # continue
@@ -469,9 +453,9 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
 
       if example_index < 20:
         tf.logging.info("*** Example ***")
-        tf.logging.info("unique_id: %s" % (unique_id))
-        tf.logging.info("example_index: %s" % (example_index))
-        tf.logging.info("doc_span_index: %s" % (doc_span_index))
+        tf.logging.info(f"unique_id: {unique_id}")
+        tf.logging.info(f"example_index: {example_index}")
+        tf.logging.info(f"doc_span_index: {doc_span_index}")
         tf.logging.info("tok_start_to_orig_index: %s" % " ".join(
             [str(x) for x in cur_tok_start_to_orig_index]))
         tf.logging.info("tok_end_to_orig_index: %s" % " ".join(
@@ -481,11 +465,9 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
         ]))
         tf.logging.info("input_pieces: %s" % " ".join(
             [tokenizer.sp_model.IdToPiece(x) for x in tokens]))
-        tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-        tf.logging.info(
-            "input_mask: %s" % " ".join([str(x) for x in input_mask]))
-        tf.logging.info(
-            "segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
+        tf.logging.info(f'input_ids: {" ".join([str(x) for x in input_ids])}')
+        tf.logging.info(f'input_mask: {" ".join([str(x) for x in input_mask])}')
+        tf.logging.info(f'segment_ids: {" ".join([str(x) for x in segment_ids])}')
 
         if is_training and span_is_impossible:
           tf.logging.info("impossible example span")
@@ -496,18 +478,13 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
           answer_text = tokenizer.sp_model.DecodePieces(pieces)
           tf.logging.info("start_position: %d" % (start_position))
           tf.logging.info("end_position: %d" % (end_position))
-          tf.logging.info(
-              "answer: %s" % (tokenization.printable_text(answer_text)))
+          tf.logging.info(f"answer: {tokenization.printable_text(answer_text)}")
 
-          # note(zhiliny): With multi processing,
-          # the example_index is actually the index within the current process
-          # therefore we use example_index=None to avoid being used in the future.
-          # The current code does not use example_index of training data.
-      if is_training:
-        feat_example_index = None
-      else:
-        feat_example_index = example_index
-
+                  # note(zhiliny): With multi processing,
+                  # the example_index is actually the index within the current process
+                  # therefore we use example_index=None to avoid being used in the future.
+                  # The current code does not use example_index of training data.
+      feat_example_index = None if is_training else example_index
       feature = InputFeatures(
           unique_id=unique_id,
           example_index=feat_example_index,
@@ -604,10 +581,7 @@ def _compute_softmax(scores):
     exp_scores.append(x)
     total_sum += x
 
-  probs = []
-  for score in exp_scores:
-    probs.append(score / total_sum)
-  return probs
+  return [score / total_sum for score in exp_scores]
 
 
 class FeatureWriter(object):
@@ -685,11 +659,7 @@ def input_fn_builder(input_file, seq_length, is_training,
 
   def input_fn(params):
     """The actual input function."""
-    if use_tpu:
-      batch_size = params["batch_size"]
-    else:
-      batch_size = bsz
-
+    batch_size = params["batch_size"] if use_tpu else bsz
     # For training, we want a lot of parallel reading and shuffling.
     # For eval, we want no shuffling and parallel reading doesn't matter.
     d = tf.data.TFRecordDataset(input_file)
@@ -758,7 +728,7 @@ def v1_model_fn_builder(albert_config, init_checkpoint, learning_rate,
 
     tf.logging.info("*** Features ***")
     for name in sorted(features.keys()):
-      tf.logging.info("  name = %s, shape = %s" % (name, features[name].shape))
+      tf.logging.info(f"  name = {name}, shape = {features[name].shape}")
 
     unique_ids = features["unique_ids"]
     input_ids = features["input_ids"]
@@ -837,8 +807,7 @@ def v1_model_fn_builder(albert_config, init_checkpoint, learning_rate,
       output_spec = contrib_tpu.TPUEstimatorSpec(
           mode=mode, predictions=predictions, scaffold_fn=scaffold_fn)
     else:
-      raise ValueError(
-          "Only TRAIN and PREDICT modes are supported: %s" % (mode))
+      raise ValueError(f"Only TRAIN and PREDICT modes are supported: {mode}")
 
     return output_spec
 
@@ -852,24 +821,21 @@ def accumulate_predictions_v1(result_dict, all_examples, all_features,
   for feature in all_features:
     example_index_to_features[feature.example_index].append(feature)
 
-  unique_id_to_result = {}
-  for result in all_results:
-    unique_id_to_result[result.unique_id] = result
-
+  unique_id_to_result = {result.unique_id: result for result in all_results}
   all_predictions = collections.OrderedDict()
   all_nbest_json = collections.OrderedDict()
   scores_diff_json = collections.OrderedDict()
 
-  for (example_index, example) in enumerate(all_examples):
+  min_null_feature_index = 0  # the paragraph slice with min mull score
+  null_start_logit = 0  # the start logit at the slice with min null score
+  null_end_logit = 0  # the end logit at the slice with min null score
+  for example_index, example in enumerate(all_examples):
     if example_index not in result_dict:
       result_dict[example_index] = {}
     features = example_index_to_features[example_index]
 
     prelim_predictions = []
-    min_null_feature_index = 0  # the paragraph slice with min mull score
-    null_start_logit = 0  # the start logit at the slice with min null score
-    null_end_logit = 0  # the end logit at the slice with min null score
-    for (feature_index, feature) in enumerate(features):
+    for feature in features:
       if feature.unique_id not in result_dict[example_index]:
         result_dict[example_index][feature.unique_id] = {}
       result = unique_id_to_result[feature.unique_id]
@@ -905,30 +871,27 @@ def write_predictions_v1(result_dict, all_examples, all_features,
                          all_results, n_best_size, max_answer_length,
                          output_prediction_file, output_nbest_file):
   """Write final predictions to the json file and log-odds of null if needed."""
-  tf.logging.info("Writing predictions to: %s" % (output_prediction_file))
-  tf.logging.info("Writing nbest to: %s" % (output_nbest_file))
+  tf.logging.info(f"Writing predictions to: {output_prediction_file}")
+  tf.logging.info(f"Writing nbest to: {output_nbest_file}")
 
   example_index_to_features = collections.defaultdict(list)
   for feature in all_features:
     example_index_to_features[feature.example_index].append(feature)
 
-  unique_id_to_result = {}
-  for result in all_results:
-    unique_id_to_result[result.unique_id] = result
-
+  unique_id_to_result = {result.unique_id: result for result in all_results}
   all_predictions = collections.OrderedDict()
   all_nbest_json = collections.OrderedDict()
   scores_diff_json = collections.OrderedDict()
 
-  for (example_index, example) in enumerate(all_examples):
+  # keep track of the minimum score of null start+end of position 0
+  score_null = 1000000  # large and positive
+  min_null_feature_index = 0  # the paragraph slice with min mull score
+  null_start_logit = 0  # the start logit at the slice with min null score
+  null_end_logit = 0  # the end logit at the slice with min null score
+  for example_index, example in enumerate(all_examples):
     features = example_index_to_features[example_index]
 
     prelim_predictions = []
-    # keep track of the minimum score of null start+end of position 0
-    score_null = 1000000  # large and positive
-    min_null_feature_index = 0  # the paragraph slice with min mull score
-    null_start_logit = 0  # the start logit at the slice with min null score
-    null_end_logit = 0  # the end logit at the slice with min null score
     for (feature_index, feature) in enumerate(features):
       for ((start_idx, end_idx), logprobs) in \
         result_dict[example_index][feature.unique_id].items():
@@ -967,11 +930,9 @@ def write_predictions_v1(result_dict, all_examples, all_features,
         if final_text in seen_predictions:
           continue
 
-        seen_predictions[final_text] = True
       else:
         final_text = ""
-        seen_predictions[final_text] = True
-
+      seen_predictions[final_text] = True
       nbest.append(
           _NbestPrediction(
               text=final_text,
@@ -984,7 +945,7 @@ def write_predictions_v1(result_dict, all_examples, all_features,
       nbest.append(
           _NbestPrediction(text="empty", start_log_prob=0.0, end_log_prob=0.0))
 
-    assert len(nbest) >= 1
+    assert nbest
 
     total_scores = []
     best_non_null_entry = None
@@ -1005,7 +966,7 @@ def write_predictions_v1(result_dict, all_examples, all_features,
       output["end_log_prob"] = entry.end_log_prob
       nbest_json.append(output)
 
-    assert len(nbest_json) >= 1
+    assert nbest_json
 
     all_predictions[example.qas_id] = nbest_json[0]["text"]
     all_nbest_json[example.qas_id] = nbest_json
@@ -1050,8 +1011,7 @@ def f1_score(prediction, ground_truth):
     return 0
   precision = 1.0 * num_same / len(prediction_tokens)
   recall = 1.0 * num_same / len(ground_truth_tokens)
-  f1 = (2 * precision * recall) / (precision + recall)
-  return f1
+  return (2 * precision * recall) / (precision + recall)
 
 
 def exact_match_score(prediction, ground_truth):
@@ -1114,8 +1074,7 @@ def normalize_answer_v2(s):
   return white_space_fix(remove_articles(remove_punc(lower(s))))
 
 def get_tokens(s):
-  if not s: return []
-  return normalize_answer_v2(s).split()
+  return [] if not s else normalize_answer_v2(s).split()
 
 def compute_exact(a_gold, a_pred):
   return int(normalize_answer_v2(a_gold) == normalize_answer_v2(a_pred))
@@ -1132,8 +1091,7 @@ def compute_f1(a_gold, a_pred):
     return 0
   precision = 1.0 * num_same / len(pred_toks)
   recall = 1.0 * num_same / len(gold_toks)
-  f1 = (2 * precision * recall) / (precision + recall)
-  return f1
+  return (2 * precision * recall) / (precision + recall)
 
 def get_raw_scores(dataset, preds):
   exact_scores = {}
@@ -1148,7 +1106,7 @@ def get_raw_scores(dataset, preds):
           # For unanswerable questions, only correct answer is empty string
           gold_answers = ['']
         if qid not in preds:
-          print('Missing prediction for %s' % qid)
+          print(f'Missing prediction for {qid}')
           continue
         a_pred = preds[qid]
         # Take max over all gold answers
@@ -1160,10 +1118,7 @@ def apply_no_ans_threshold(scores, na_probs, qid_to_has_ans, na_prob_thresh):
   new_scores = {}
   for qid, s in scores.items():
     pred_na = na_probs[qid] > na_prob_thresh
-    if pred_na:
-      new_scores[qid] = float(not qid_to_has_ans[qid])
-    else:
-      new_scores[qid] = s
+    new_scores[qid] = float(not qid_to_has_ans[qid]) if pred_na else s
   return new_scores
 
 def make_eval_dict(exact_scores, f1_scores, qid_list=None):
@@ -1194,10 +1149,7 @@ def find_best_thresh(preds, scores, na_probs, qid_to_has_ans):
     if qid_to_has_ans[qid]:
       diff = scores[qid]
     else:
-      if preds[qid]:
-        diff = -1
-      else:
-        diff = 0
+      diff = -1 if preds[qid] else 0
     cur_score += diff
     if cur_score > best_score:
       best_score = cur_score
@@ -1216,7 +1168,7 @@ def find_all_best_thresh(main_eval, preds, exact_raw, f1_raw, na_probs, qid_to_h
 
 def merge_eval(main_eval, new_eval, prefix):
   for k in new_eval:
-    main_eval['%s_%s' % (prefix, k)] = new_eval[k]
+    main_eval[f'{prefix}_{k}'] = new_eval[k]
 
 ####### above are from official SQuAD v2.0 evaluation scripts
 

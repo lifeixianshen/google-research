@@ -58,42 +58,17 @@ class SingleOutputTask(task.Task):
           self.config.distill_inputs(self.name))
 
     tokens_a = self._tokenizer.tokenize(example.text_a)
-    tokens_b = None
-    if example.text_b:
-      tokens_b = self._tokenizer.tokenize(example.text_b)
-
+    tokens_b = self._tokenizer.tokenize(example.text_b) if example.text_b else None
     if tokens_b:
       # Modifies `tokens_a` and `tokens_b` in place so that the total
       # length is less than the specified length.
       # Account for [CLS], [SEP], [SEP] with "- 3"
       _truncate_seq_pair(tokens_a, tokens_b, self.config.max_seq_length - 3)
-    else:
-      # Account for [CLS] and [SEP] with "- 2"
-      if len(tokens_a) > self.config.max_seq_length - 2:
-        tokens_a = tokens_a[0:(self.config.max_seq_length - 2)]
+    elif len(tokens_a) > self.config.max_seq_length - 2:
+      tokens_a = tokens_a[:self.config.max_seq_length - 2]
 
-    # The convention in BERT is:
-    # (a) For sequence pairs:
-    #  tokens:   [CLS] is this jack ##son ##ville ? [SEP] no it is not . [SEP]
-    #  type_ids: 0     0  0    0    0     0       0 0     1  1  1  1   1 1
-    # (b) For single sequences:
-    #  tokens:   [CLS] the dog is hairy . [SEP]
-    #  type_ids: 0     0   0   0  0     0 0
-    #
-    # Where "type_ids" are used to indicate whether this is the first
-    # sequence or the second sequence. The embedding vectors for `type=0` and
-    # `type=1` were learned during pre-training and are added to the wordpiece
-    # embedding vector (and position vector). This is not *strictly* necessary
-    # since the [SEP] token unambiguously separates the sequences, but it
-    # makes it easier for the model to learn the concept of sequences.
-    #
-    # For classification tasks, the first vector (corresponding to [CLS]) is
-    # used as the "sentence vector". Note that this only makes sense because
-    # the entire model is fine-tuned.
-    tokens = []
-    segment_ids = []
-    tokens.append("[CLS]")
-    segment_ids.append(0)
+    tokens = ["[CLS]"]
+    segment_ids = [0]
     for token in tokens_a:
       tokens.append(token)
       segment_ids.append(0)
@@ -129,7 +104,7 @@ class SingleOutputTask(task.Task):
         "input_mask": input_mask,
         "segment_ids": segment_ids,
         "task_id": self.config.task_names.index(self.name),
-        self.name + "_eid": eid,
+        f"{self.name}_eid": eid,
     }
     self._add_features(features, example,
                        None if self._distill_inputs is None else
@@ -182,21 +157,24 @@ class RegressionTask(SingleOutputTask):
     return 0.0
 
   def get_feature_specs(self):
-    feature_specs = [feature_spec.FeatureSpec(self.name + "_eid", []),
-                     feature_spec.FeatureSpec(self.name + "_targets", [],
-                                              is_int_feature=False)]
+    feature_specs = [
+        feature_spec.FeatureSpec(f"{self.name}_eid", []),
+        feature_spec.FeatureSpec(f"{self.name}_targets", [],
+                                 is_int_feature=False),
+    ]
     if self.config.distill:
-      feature_specs.append(feature_spec.FeatureSpec(
-          self.name + "_distill_targets", [], is_int_feature=False))
+      feature_specs.append(
+          feature_spec.FeatureSpec(f"{self.name}_distill_targets", [],
+                                   is_int_feature=False))
     return feature_specs
 
   def _add_features(self, features, example, distill_inputs):
     label = float(example.label)
     assert self._min_value <= label <= self._max_value
     label = (label - self._min_value) / self._max_value
-    features[example.task_name + "_targets"] = label
+    features[f"{example.task_name}_targets"] = label
     if distill_inputs is not None:
-      features[self.name + "_distill_targets"] = distill_inputs
+      features[f"{self.name}_distill_targets"] = distill_inputs
 
   def get_prediction_module(self, bert_model, features, is_training,
                             percent_done):
@@ -207,9 +185,9 @@ class RegressionTask(SingleOutputTask):
     predictions = tf.layers.dense(reprs, 1)
     predictions = tf.squeeze(predictions, -1)
 
-    targets = features[self.name + "_targets"]
+    targets = features[f"{self.name}_targets"]
     if self.config.distill:
-      distill_targets = features[self.name + "_distill_targets"]
+      distill_targets = features[f"{self.name}_distill_targets"]
       if self.config.teacher_annealing:
         targets = ((targets * percent_done) +
                    (distill_targets * (1 - percent_done)))
@@ -221,8 +199,8 @@ class RegressionTask(SingleOutputTask):
     outputs = dict(
         loss=losses,
         predictions=predictions,
-        targets=features[self.name + "_targets"],
-        eid=features[self.name + "_eid"]
+        targets=features[f"{self.name}_targets"],
+        eid=features[f"{self.name}_eid"],
     )
     return losses, outputs
 
@@ -244,21 +222,25 @@ class ClassificationTask(SingleOutputTask):
     return self._label_list[0]
 
   def get_feature_specs(self):
-    feature_specs = [feature_spec.FeatureSpec(self.name + "_eid", []),
-                     feature_spec.FeatureSpec(self.name + "_label_ids", [])]
+    feature_specs = [
+        feature_spec.FeatureSpec(f"{self.name}_eid", []),
+        feature_spec.FeatureSpec(f"{self.name}_label_ids", []),
+    ]
     if self.config.distill:
-      feature_specs.append(feature_spec.FeatureSpec(
-          self.name + "_logits", [len(self._label_list)], is_int_feature=False))
+      feature_specs.append(
+          feature_spec.FeatureSpec(
+              f"{self.name}_logits",
+              [len(self._label_list)],
+              is_int_feature=False,
+          ))
     return feature_specs
 
   def _add_features(self, features, example, distill_inputs):
-    label_map = {}
-    for (i, label) in enumerate(self._label_list):
-      label_map[label] = i
+    label_map = {label: i for i, label in enumerate(self._label_list)}
     label_id = label_map[example.label]
-    features[example.task_name + "_label_ids"] = label_id
+    features[f"{example.task_name}_label_ids"] = label_id
     if distill_inputs is not None:
-      features[self.name + "_logits"] = distill_inputs
+      features[f"{self.name}_logits"] = distill_inputs
 
   def get_prediction_module(self, bert_model, features, is_training,
                             percent_done):
@@ -272,9 +254,9 @@ class ClassificationTask(SingleOutputTask):
     # probabilities = tf.nn.softmax(logits, axis=-1)
     log_probs = tf.nn.log_softmax(logits, axis=-1)
 
-    label_ids = features[self.name + "_label_ids"]
+    label_ids = features[f"{self.name}_label_ids"]
     if self.config.distill:
-      teacher_labels = tf.nn.softmax(features[self.name + "_logits"] / 1.0)
+      teacher_labels = tf.nn.softmax(features[f"{self.name}_logits"] / 1.0)
       true_labels = tf.one_hot(label_ids, depth=num_labels, dtype=tf.float32)
 
       if self.config.teacher_annealing:
@@ -293,7 +275,7 @@ class ClassificationTask(SingleOutputTask):
         logits=logits,
         predictions=tf.argmax(logits, axis=-1),
         label_ids=label_ids,
-        eid=features[self.name + "_eid"],
+        eid=features[f"{self.name}_eid"],
     )
     return losses, outputs
 
@@ -328,7 +310,7 @@ class MNLI(ClassificationTask):
   def get_examples(self, split):
     if split == "dev":
       split += "_matched"
-    return self.load_data(split + ".tsv", split)
+    return self.load_data(f"{split}.tsv", split)
 
   def _create_examples(self, lines, split):
     examples = []

@@ -43,30 +43,52 @@ def seed_init():
 
 def set_mnist_params():
   """Set hyper parameters."""
-  mnist_params = {
-      'n_clusters': 10,  # number of output clusters
-      'use_code_space': False,  # enable / disable code space embedding
-      'affinity': 'siamese',  # affinity type: siamese / knn
-      'n_nbrs': FLAGS.n_nbrs,  # number of neighbors for graph Laplacian
-      'scale_nbr': FLAGS.scale_nbr,  # scale of Gaussian graph Laplacian
-      'siam_k': 2,  # siamese net: number of neighbors to use (the 'k' in knn)
+  return {
+      'n_clusters':
+      10,  # number of output clusters
+      'use_code_space':
+      False,  # enable / disable code space embedding
+      'affinity':
+      'siamese',  # affinity type: siamese / knn
+      'n_nbrs':
+      FLAGS.n_nbrs,  # number of neighbors for graph Laplacian
+      'scale_nbr':
+      FLAGS.scale_nbr,  # scale of Gaussian graph Laplacian
+      'siam_k':
+      2,  # siamese net: number of neighbors to use (the 'k' in knn)
       # to construct training pairs
-      'siam_ne': 400,  # siamese net: number of training epochs
-      'cnc_epochs': FLAGS.cnc_epochs,  # CNC: number of training epochs
-      'siam_lr': 1e-3,  # siamese net: initial learning rate
-      'cnc_lr': FLAGS.cnc_lr,  # CNC: initial learning rate
-      'cnc_tau': FLAGS.cnc_tau,  # CNC: initial tempreture
-      'min_tem': FLAGS.min_tem,
-      'siam_patience': 10,  # siamese net: early stopping patience
-      'cnc_patience': FLAGS.cnc_patience,  # CNC: early stopping patience
-      'siam_drop': 0.1,  # siamese net: learning rate scheduler decay
-      'cnc_drop': FLAGS.cnc_drop,  # CNC: learning rate decay
-      'batch_size': FLAGS.batch_size,  # CNC: batch size
-      'bal_reg': FLAGS.bal_reg,
-      'siam_reg': None,  # siamese net: regularization parameter
-      'cnc_reg': None,  # CNC: regularization parameter
-      'siam_n': None,  # siamese net: subset of data to construct training pairs
-      'siamese_tot_pairs': 600000,  # siamese net: total number of pairs
+      'siam_ne':
+      400,  # siamese net: number of training epochs
+      'cnc_epochs':
+      FLAGS.cnc_epochs,  # CNC: number of training epochs
+      'siam_lr':
+      1e-3,  # siamese net: initial learning rate
+      'cnc_lr':
+      FLAGS.cnc_lr,  # CNC: initial learning rate
+      'cnc_tau':
+      FLAGS.cnc_tau,  # CNC: initial tempreture
+      'min_tem':
+      FLAGS.min_tem,
+      'siam_patience':
+      10,  # siamese net: early stopping patience
+      'cnc_patience':
+      FLAGS.cnc_patience,  # CNC: early stopping patience
+      'siam_drop':
+      0.1,  # siamese net: learning rate scheduler decay
+      'cnc_drop':
+      FLAGS.cnc_drop,  # CNC: learning rate decay
+      'batch_size':
+      FLAGS.batch_size,  # CNC: batch size
+      'bal_reg':
+      FLAGS.bal_reg,
+      'siam_reg':
+      None,  # siamese net: regularization parameter
+      'cnc_reg':
+      None,  # CNC: regularization parameter
+      'siam_n':
+      None,  # siamese net: subset of data to construct training pairs
+      'siamese_tot_pairs':
+      600000,  # siamese net: total number of pairs
       'siam_arch': [  # siamese network architecture.
           {
               'type': 'relu',
@@ -100,8 +122,7 @@ def set_mnist_params():
           },
       ],
       'generalization_metrics':
-          True,  # enable to check out of set generalization error and nmi
+      True,  # enable to check out of set generalization error and nmi
       'use_all_data':
-          False,  # enable to use all data for training (no test set)
+      False,  # enable to use all data for training (no test set)
   }
-  return mnist_params

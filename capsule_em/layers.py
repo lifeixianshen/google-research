@@ -34,10 +34,9 @@ def margin_loss(labels, raw_logits, margin=0.4, downweight=0.5):
 
 def order_loss(labels, logits, margin=0.2):
   label_act = tf.reduce_sum(labels * logits, axis=-1, keep_dims=True)
-  negative_cost = (1 - labels) * tf.cast(
-      tf.greater(logits, label_act - margin), tf.float32) * tf.pow(
-          logits + margin - label_act, 2)
-  return negative_cost
+  return ((1 - labels) *
+          tf.cast(tf.greater(logits, label_act - margin), tf.float32) *
+          tf.pow(logits + margin - label_act, 2))
 
 
 def optimizer(logits, labels, multi, scope, softmax, rate=1.0, step=0.0):

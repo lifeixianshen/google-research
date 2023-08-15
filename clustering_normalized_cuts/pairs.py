@@ -107,7 +107,7 @@ def create_pairs_from_labeled_data(x, digit_indices, use_classes=None):
 
   pairs = []
   labels = []
-  n = min([len(digit_indices[d]) for d in range(n_clusters)]) - 1
+  n = min(len(digit_indices[d]) for d in range(n_clusters)) - 1
   for d in use_classes:
     for i in range(n):
       z1, z2 = digit_indices[d][i], digit_indices[d][i + 1]
@@ -174,7 +174,7 @@ def create_pairs_from_unlabeled_data(x1,
   verbose = True
 
   if verbose:
-    print('computing k={} nearest neighbors...'.format(k))
+    print(f'computing k={k} nearest neighbors...')
   if len(x1.shape) > 2:
     x1_flat = x1.reshape(x1.shape[0], np.prod(x1.shape[1:]))[:n]
   else:
@@ -212,7 +212,7 @@ def create_pairs_from_unlabeled_data(x1,
       k_max = min(idx.shape[1], int(k_max * 2))
       consecutive_fails = 0
     if verbose and i % 10000 == 0:
-      print('Iter: {}/{}'.format(i, n))
+      print(f'Iter: {i}/{n}')
     # pick points from neighbors of i for positive pairs
     try:
       choices = get_choices(

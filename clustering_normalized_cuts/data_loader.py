@@ -63,12 +63,10 @@ def get_data(params):
       'val_unlabeled_and_labeled'     - (pairs_val_unlabeled,
       dist_val_unlabeled, pairs_val_labeled, dist_val_labeled)
   """
-  ret = {}
-
   # get data
   x_train, x_test, y_train, y_test = load_data(params)
 
-  ret['cnc'] = {}
+  ret = {'cnc': {}}
   if params.get('use_all_data'):
     x_train = np.concatenate((x_train, x_test), axis=0)
     y_train = np.concatenate((y_train, y_test), axis=0)
@@ -201,7 +199,7 @@ def load_data(params):
   if params['dset'] == 'mnist':
     x_train, x_test, y_train, y_test = get_mnist()
   else:
-    raise ValueError('Dataset provided ({}) is invalid!'.format(params['dset']))
+    raise ValueError(f"Dataset provided ({params['dset']}) is invalid!")
 
   return x_train, x_test, y_train, y_test
 
@@ -212,15 +210,15 @@ def embed_data(x, dset, path):
   if x:
     return np.zeros(shape=(0, 10))
   # load model and weights
-  json_path = os.path.join(path, 'ae_{}.json'.format(dset))
+  json_path = os.path.join(path, f'ae_{dset}.json')
   print('load model from json file:', json_path)
   with gfile.Open(json_path) as f:
     pt_ae = model_from_json(f.read())
-  weights_path = os.path.join(path, 'ae_{}_weights.h5'.format(dset))
+  weights_path = os.path.join(path, f'ae_{dset}_weights.h5')
   print('load code spase from:', weights_path)
   local_filename = weights_path.split('/')[-1]
   tmp_filename = os.path.join(tempfile.gettempdir(),
-                              str(int(time.time())) + '_' + local_filename)
+                              f'{int(time.time())}_{local_filename}')
   gfile.Copy(weights_path, tmp_filename)
   pt_ae.load_weights(tmp_filename)
   gfile.Remove(tmp_filename)
@@ -254,9 +252,7 @@ def predict_with_k_fn(k_fn, x, bs=1000):
   y = [np.empty(shape_y) for _ in k_fn.outputs]
 
   for i in range(int(x[0].shape[0] / bs + 1)):
-    x_batch = []
-    for x_ in x:
-      x_batch.append(x_[i * bs:(i + 1) * bs])
+    x_batch = [x_[i * bs:(i + 1) * bs] for x_ in x]
     temp = k_fn(x_batch)
     for j in range(num_outs):
       y[j][i * bs:(i + 1) * bs] = temp[j]
@@ -282,16 +278,16 @@ def split_data(x, y, split, permute=None):
   if permute is not None:
     if not isinstance(permute, np.ndarray):
       raise ValueError(
-          'Provided permute array should be an np.ndarray, not {}!'.format(
-              type(permute)))
+          f'Provided permute array should be an np.ndarray, not {type(permute)}!'
+      )
     if len(permute.shape) != 1:
       raise ValueError(
-          'Provided permute array should be of dimension 1, not {}'.format(
-              len(permute.shape)))
+          f'Provided permute array should be of dimension 1, not {len(permute.shape)}'
+      )
     if len(permute) != n:
       raise ValueError(
-          'Provided permute should be the same length as x! (len(permute) = {}, n = {}'
-          .format(len(permute), n))
+          f'Provided permute should be the same length as x! (len(permute) = {len(permute)}, n = {n}'
+      )
   else:
     permute = np.arange(n)
 
@@ -306,10 +302,7 @@ def split_data(x, y, split, permute=None):
     x_ = x[p_]
     y_ = y[p_]
     prev_idx = idx
-    ret_x_y_p.append(x_)
-    ret_x_y_p.append(y_)
-    ret_x_y_p.append(p_)
-
+    ret_x_y_p.extend((x_, y_, p_))
   return ret_x_y_p[0], ret_x_y_p[1], ret_x_y_p[2], ret_x_y_p[3], ret_x_y_p[
       4], ret_x_y_p[5]
 

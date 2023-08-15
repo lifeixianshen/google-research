@@ -131,12 +131,11 @@ def run_net(data, params):
     nmi_score_test = nmi(prediction_test, y_test)
     print('TEST NMI: {0}'.format(np.round(nmi_score_test, 3)))
     with gfile.Open(params['result_path'] + 'results', 'w') as f:
-      f.write(accuray_all + ' ' + accuray_train + ' ' + accuray_test + '\n')
-      f.write(
-          str(np.round(nmi_score_all, 3)) + ' ' +
-          str(np.round(nmi_score_train, 3)) + ' ' +
-          str(np.round(nmi_score_test, 3)) + '\n')
+      f.write(f'{accuray_all} {accuray_train} {accuray_test}' + '\n')
+      f.write((
+          f'{str(np.round(nmi_score_all, 3))} {str(np.round(nmi_score_train, 3))} {str(np.round(nmi_score_test, 3))}'
+          + '\n'))
 
   else:
     with gfile.Open(params['result_path'] + 'results', 'w') as f:
-      f.write(accuray_all + ' ' + str(np.round(nmi_score_all, 3)) + '\n')
+      f.write(f'{accuray_all} {str(np.round(nmi_score_all, 3))}' + '\n')

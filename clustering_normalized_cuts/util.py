@@ -86,9 +86,9 @@ def make_layer_list(arch, network_type=None, reg=None, dropout=0):
   layers = []
   for i, a in enumerate(arch):
     layer = {'l2_reg': reg}
-    layer.update(a)
+    layer |= a
     if network_type:
-      layer['name'] = '{}_{}'.format(network_type, i)
+      layer['name'] = f'{network_type}_{i}'
     layers.append(layer)
     if a['type'] != 'Flatten' and dropout != 0:
       dropout_layer = {
@@ -96,7 +96,7 @@ def make_layer_list(arch, network_type=None, reg=None, dropout=0):
           'rate': dropout,
       }
       if network_type:
-        dropout_layer['name'] = '{}_dropout_{}'.format(network_type, i)
+        dropout_layer['name'] = f'{network_type}_dropout_{i}'
       layers.append(dropout_layer)
   return layers
 
@@ -151,15 +151,12 @@ class LearningHandler(Callback):
     """For managing learning rate, early stopping, and temperature."""
     stop_training = False
     min_tem = self.min_tem
-    anneal_rate = 0.00003
     if self.gumble and epoch % 20 == 0:
+      anneal_rate = 0.00003
       self.tau = np.maximum(self.tau * np.exp(-anneal_rate * epoch), min_tem)
       K.set_value(self.tau_tensor, self.tau)
     # check if we need to stop or increase scheduler stage
-    if isinstance(logs, dict):
-      loss = logs['loss']
-    else:
-      loss = logs
+    loss = logs['loss'] if isinstance(logs, dict) else logs
     if loss <= self.best_loss:
       self.best_loss = loss
       self.wait = 0
@@ -297,10 +294,9 @@ def print_accuracy(cluster_assignments,
   accuracy, confusion_matrix = get_accuracy(cluster_assignments, y_true,
                                             n_clusters)
   # get the confusion matrix
-  print('confusion matrix{}: '.format(extra_identifier))
+  print(f'confusion matrix{extra_identifier}: ')
   print(confusion_matrix)
-  print(('Cnc_net{} accuracy: '.format(extra_identifier) +
-         str(np.round(accuracy, 3))))
+  print(f'Cnc_net{extra_identifier} accuracy: {str(np.round(accuracy, 3))}')
   return str(np.round(accuracy, 3))
 
 

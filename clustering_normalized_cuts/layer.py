@@ -38,11 +38,7 @@ def stack_layers(inputs, net_layers, kernel_initializer='glorot_uniform'):
       respectively, where output_tensors are the outputs of the
       input_placeholders in inputs after each layer in net_layers is applied.
   """
-  outputs = dict()
-
-  for key in inputs:
-    outputs[key] = inputs[key]
-
+  outputs = {key: inputs[key] for key in inputs}
   for layer in net_layers:
     # check for l2_reg argument
     l2_reg = layer.get('l2_reg')
@@ -85,7 +81,7 @@ def stack_layers(inputs, net_layers, kernel_initializer='glorot_uniform'):
     elif layer['type'] == 'Flatten':
       l = layers.Flatten(name=layer.get('name'))
     else:
-      raise ValueError("Invalid layer type '{}'".format(layer['type']))
+      raise ValueError(f"Invalid layer type '{layer['type']}'")
 
     # apply the layer to each input in inputs
     for k in outputs:

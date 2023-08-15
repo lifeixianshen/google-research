@@ -49,7 +49,7 @@ def _build_capsule(input_tensor, input_atom, position_grid, num_classes):
           conv_caps_act,
           last_dim,
           int(FLAGS.caps_dims.split(',')[i]),
-          'convCaps{}'.format(i),
+          f'convCaps{i}',
           FLAGS.routing_iteration,
           num_in_atoms=int(math.sqrt(FLAGS.num_primary_atoms)),
           num_out_atoms=int(math.sqrt(FLAGS.num_primary_atoms)),

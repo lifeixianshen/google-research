@@ -47,7 +47,8 @@ class AttributionTest(tf.test.TestCase):
           output_tensor=output_tensor,
           num_evals=num_evals,
           attribution_dims_map={x: [1]},
-          zero_baseline_tensors=set([x]))
+          zero_baseline_tensors={x},
+      )
 
       with tf.Session(graph=graph) as sess:
         sess.run(tf.global_variables_initializer())

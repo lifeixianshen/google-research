@@ -90,15 +90,15 @@ def get_task_weights(config, sizes):
 
   if config.dataset_multiples:
     _, weights = _multiples_and_weights(config)
-    return weights
   else:
     if config.task_weight_exponent < 0:
       return {task_name: 1.0 for task_name in sizes}
     n_examples = sum(sizes.values())
     weights = {task_name: 1.0 / (size**(1 - config.task_weight_exponent))
                for task_name, size in sizes.items()}
-    expected_weight = sum([weights[task_name] * sizes[task_name] / n_examples
-                           for task_name in weights])
+    expected_weight = sum(weights[task_name] * sizes[task_name] / n_examples
+                          for task_name in weights)
     weights = {task_name: w / expected_weight
                for task_name, w in weights.items()}
-    return weights
+
+  return weights

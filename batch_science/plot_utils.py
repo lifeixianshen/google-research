@@ -66,8 +66,8 @@ def plot_steps_to_result(ax,
       normalizing_index = np.where(batch_sizes == normalizing_batch_size)[0]
       if len(normalizing_index) != 1:
         raise ValueError(
-            "Expected one row with batch_size={}, but found {}".format(
-                normalizing_batch_size, len(normalizing_index)))
+            f"Expected one row with batch_size={normalizing_batch_size}, but found {len(normalizing_index)}"
+        )
       steps = steps.astype(np.float) / steps[normalizing_index]
 
     # Plot steps to result.
@@ -85,7 +85,7 @@ def plot_steps_to_result(ax,
   # Format the axes.
   ax.set_xlabel("Batch Size")
   if normalizing_batch_size:
-    ylabel = "Steps / (Steps at B={})".format(normalizing_batch_size)
+    ylabel = f"Steps / (Steps at B={normalizing_batch_size})"
   else:
     ylabel = "Steps"
   ax.set_ylabel(ylabel)
@@ -132,8 +132,7 @@ def plot_optimal_metaparameter_values(ax, parameter_to_plot, steps_to_result,
     yvalues = learning_rates / (1 - momenta)
     ylabel = "Learning Rate / (1 - Momentum)"
   else:
-    raise ValueError(
-        "Unrecognized parameter_to_plot: {}".format(parameter_to_plot))
+    raise ValueError(f"Unrecognized parameter_to_plot: {parameter_to_plot}")
 
   # Plot the optimal parameter values vs batch size.
   ax.plot(batch_sizes, yvalues, "^-", label="Optimal " + parameter_to_plot)
@@ -224,7 +223,7 @@ def plot_learning_rate_momentum_scatter(ax,
     elif trial_metadata["status"] == "INFEASIBLE":
       infeasible_params.append(params)
     else:
-      raise ValueError("Unexpected status: {}".format(trial_metadata["status"]))
+      raise ValueError(f'Unexpected status: {trial_metadata["status"]}')
 
   # Plot all good, bad, and infeasible parameter values.
   learning_rate, one_minus_momentum = _unpack_params(good_params)

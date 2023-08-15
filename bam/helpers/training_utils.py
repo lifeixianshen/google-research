@@ -40,9 +40,7 @@ class ETAHook(tf.train.SessionRunHook):
   def before_run(self, run_context):
     self._should_trigger = (self._iter_count %
                             self._config.iterations_per_loop == 0)
-    if self._should_trigger:
-      return tf.train.SessionRunArgs(self._to_log)
-    return None
+    return tf.train.SessionRunArgs(self._to_log) if self._should_trigger else None
 
   def after_run(self, run_context, run_values):
     if self._iter_count == 0:
@@ -61,12 +59,11 @@ class ETAHook(tf.train.SessionRunHook):
     time_elapsed = time.time() - self._start_time
     time_per_step = time_elapsed / self._iter_count
     msg += ', GPS: {:.1f}'.format(1 / time_per_step)
-    msg += ', ELAP: ' + secs_to_str(time_elapsed)
-    msg += ', ETA: ' +  secs_to_str(
-        (self._n_steps - self._iter_count) * time_per_step)
+    msg += f', ELAP: {secs_to_str(time_elapsed)}'
+    msg += f', ETA: {secs_to_str((self._n_steps - self._iter_count) * time_per_step)}'
     if run_values is not None:
       for tag, value in run_values.results.items():
-        msg += ' - ' + str(tag) + (': {:.4f}'.format(value))
+        msg += f' - {str(tag)}' + (': {:.4f}'.format(value))
     utils.log(msg)
 
 

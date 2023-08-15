@@ -25,11 +25,11 @@ def check_inputs(x_unlabeled, x_labeled, y_labeled, y_true):
   if x_unlabeled is None:
     if x_labeled is None:
       raise Exception('No data, labeled or unlabeled, passed to check_inputs!')
-    x_unlabeled = x_labeled[0:0]
+    x_unlabeled = x_labeled[:0]
   if x_labeled is not None and y_labeled is not None:
     pass
   elif x_labeled is None and y_labeled is None:
-    x_labeled = x_unlabeled[0:0]
+    x_labeled = x_unlabeled[:0]
     y_shape = y_true.get_shape()[1:K.ndim(y_true)].as_list()
     y_labeled = np.empty([0] + y_shape)
   else:
@@ -98,7 +98,7 @@ def train_step(return_vars,
           feed_dict[y_true] = y_labeled[batch_ids]
         else:
           # we have no labeled points, so feed an empty array
-          feed_dict[input_placeholder] = x[0:0]
+          feed_dict[input_placeholder] = x[:0]
           feed_dict[y_true] = np.empty([0] + y_shape)
       elif input_type == 'Unlabeled':
         if x_unlabeled:
@@ -107,7 +107,7 @@ def train_step(return_vars,
           feed_dict[input_placeholder] = x_unlabeled[batch_ids]
         else:
           # we have no unlabeled points, so feed an empty array
-          feed_dict[input_placeholder] = x[0:0]
+          feed_dict[input_placeholder] = x[:0]
 
     all_vars = return_vars + updates
     return_vars_ += np.asarray(K.get_session().run(
@@ -158,7 +158,7 @@ def predict(predict_var,
 
   y_preds = []
   # predict over all points
-  for _, (batch_start, batch_end) in enumerate(batches):
+  for batch_start, batch_end in batches:
     feed_dict = {K.learning_phase(): 0}
 
     # feed corresponding input for each input_type
@@ -175,7 +175,7 @@ def predict(predict_var,
           feed_dict[y_true] = y_labeled[batch_ids]
         else:
           # we have no labeled points, so feed an empty array
-          feed_dict[input_placeholder] = x[0:0]
+          feed_dict[input_placeholder] = x[:0]
           feed_dict[y_true] = np.empty([0] + y_shape)
 
     # evaluate the batch
@@ -183,10 +183,7 @@ def predict(predict_var,
         predict_var, feed_dict=feed_dict))
     y_preds.append(y_pred_batch)
 
-  if y_preds[0].shape:
-    return np.concatenate(y_preds)
-  else:
-    return np.sum(y_preds)
+  return np.concatenate(y_preds) if y_preds[0].shape else np.sum(y_preds)
 
 
 def predict_sum(predict_var,

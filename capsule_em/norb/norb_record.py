@@ -52,14 +52,14 @@ def _read_and_decode(filename_queue, image_pixel=96, distort=0):
   image = tf.cast(image, tf.float32)
   print(image.get_shape()[0].value)
   if image_pixel < 96:
-    print('image resizing to {}'.format(image_pixel))
+    print(f'image resizing to {image_pixel}')
     image = tf.image.resize_images(image, [image_pixel, image_pixel])
     orig_images = image
 
-  if image_pixel == 48:
-    new_dim = 32
-  elif image_pixel == 32:
+  if image_pixel == 32:
     new_dim = 22
+  elif image_pixel == 48:
+    new_dim = 32
   if distort == 1:
     image = tf.image.random_brightness(image, max_delta=63)
     image = tf.image.random_contrast(image, lower=0.2, upper=1.8)
@@ -95,18 +95,14 @@ def inputs(train_dir,
            patching=False):
   """Reads input data num_epochs times."""
   if multi:
-    filename = os.path.join(train_dir, '{}duo-az.tfrecords'.format(split))
+    filename = os.path.join(train_dir, f'{split}duo-az.tfrecords')
   else:
-    filename = os.path.join(train_dir, '{}.tfrecords'.format(split))
+    filename = os.path.join(train_dir, f'{split}.tfrecords')
 
   with tf.name_scope('input'):
     filename_queue = tf.train.string_input_producer([filename])
 
-    if distort:
-      d = 1 + (split == 'test')
-    else:
-      d = 0
-
+    d = 1 + (split == 'test') if distort else 0
     # Even when reading in multiple threads, share the filename
     # queue.
     image, label, dim, orig_image = _read_and_decode(
@@ -153,7 +149,7 @@ def inputs(train_dir,
         # cc_labels = tf.tile(sparse_labels, [9])
         cc_images = tf.concat([images, c_images, c2images, c3images], axis=0)
         cc_labels = tf.tile(sparse_labels, [13])
-    features = {
+    return {
         'images': images,
         'labels': tf.one_hot(sparse_labels, 5),
         'recons_image': images,
@@ -165,5 +161,3 @@ def inputs(train_dir,
         'cc_recons_label': cc_labels,
         'cc_labels': tf.one_hot(cc_labels, 5),
     }
-
-    return features

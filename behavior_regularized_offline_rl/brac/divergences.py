@@ -105,8 +105,7 @@ class W(FDivergence):
 def laplacian_kernel(x1, x2, sigma=20.0):
   d12 = tf.reduce_sum(
       tf.abs(x1[None] - x2[:, None]), axis=-1)
-  k12 = tf.exp(- d12 / sigma)
-  return k12
+  return tf.exp(- d12 / sigma)
 
 
 @gin.configurable
@@ -114,10 +113,7 @@ def mmd(x1, x2, kernel, use_sqrt=False):
   k11 = tf.reduce_mean(kernel(x1, x1), axis=[0, 1])
   k12 = tf.reduce_mean(kernel(x1, x2), axis=[0, 1])
   k22 = tf.reduce_mean(kernel(x2, x2), axis=[0, 1])
-  if use_sqrt:
-    return tf.sqrt(k11 + k22 - 2 * k12 + EPS)
-  else:
-    return k11 + k22 - 2 * k12
+  return tf.sqrt(k11 + k22 - 2 * k12 + EPS) if use_sqrt else k11 + k22 - 2 * k12
 
 
 class MMD(Divergence):

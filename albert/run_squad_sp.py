@@ -212,15 +212,12 @@ class SquadExample(object):
 
   def __repr__(self):
     s = ""
-    s += "qas_id: %s" % (tokenization.printable_text(self.qas_id))
-    s += ", question_text: %s" % (
-        tokenization.printable_text(self.question_text))
-    s += ", paragraph_text: [%s]" % (" ".join(self.paragraph_text))
+    s += f"qas_id: {tokenization.printable_text(self.qas_id)}"
+    s += f", question_text: {tokenization.printable_text(self.question_text)}"
+    s += f', paragraph_text: [{" ".join(self.paragraph_text)}]'
     if self.start_position:
       s += ", start_position: %d" % (self.start_position)
-    if self.start_position:
       s += ", end_position: %d" % (self.end_position)
-    if self.start_position:
       s += ", is_impossible: %r" % (self.is_impossible)
     return s
 
@@ -315,28 +312,16 @@ def _convert_index(index, pos, m=None, is_start=True):
   assert index[front] is not None or index[rear] is not None
   if index[front] is None:
     if index[rear] >= 1:
-      if is_start:
-        return 0
-      else:
-        return index[rear] - 1
+      return 0 if is_start else index[rear] - 1
     return index[rear]
   if index[rear] is None:
     if m is not None and index[front] < m - 1:
-      if is_start:
-        return index[front] + 1
-      else:
-        return m - 1
+      return index[front] + 1 if is_start else m - 1
     return index[front]
   if is_start:
-    if index[rear] > index[front] + 1:
-      return index[front] + 1
-    else:
-      return index[rear]
+    return min(index[rear], index[front] + 1)
   else:
-    if index[rear] > index[front] + 1:
-      return index[rear] - 1
-    else:
-      return index[front]
+    return index[rear] - 1 if index[rear] > index[front] + 1 else index[front]
 
 
 def convert_examples_to_features(examples, tokenizer, max_seq_length,
@@ -361,7 +346,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
             example.question_text, lower=FLAGS.do_lower_case))
 
     if len(query_tokens) > max_query_length:
-      query_tokens = query_tokens[0:max_query_length]
+      query_tokens = query_tokens[:max_query_length]
 
     paragraph_text = example.paragraph_text
     para_tokens = tokenization.encode_pieces(
@@ -566,8 +551,7 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
         doc_start = doc_span.start
         doc_end = doc_span.start + doc_span.length - 1
         out_of_span = False
-        if not (tok_start_position >= doc_start and
-                tok_end_position <= doc_end):
+        if tok_start_position < doc_start or tok_end_position > doc_end:
           out_of_span = True
         if out_of_span:
           # continue
@@ -585,9 +569,9 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
 
       if example_index < 20:
         tf.logging.info("*** Example ***")
-        tf.logging.info("unique_id: %s" % (unique_id))
-        tf.logging.info("example_index: %s" % (example_index))
-        tf.logging.info("doc_span_index: %s" % (doc_span_index))
+        tf.logging.info(f"unique_id: {unique_id}")
+        tf.logging.info(f"example_index: {example_index}")
+        tf.logging.info(f"doc_span_index: {doc_span_index}")
         tf.logging.info("tok_start_to_orig_index: %s" % " ".join(
             [str(x) for x in cur_tok_start_to_orig_index]))
         tf.logging.info("tok_end_to_orig_index: %s" % " ".join(
@@ -597,11 +581,9 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
         ]))
         tf.logging.info("input_pieces: %s" % " ".join(
             [tokenizer.sp_model.IdToPiece(x) for x in tokens]))
-        tf.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-        tf.logging.info(
-            "input_mask: %s" % " ".join([str(x) for x in input_mask]))
-        tf.logging.info(
-            "segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
+        tf.logging.info(f'input_ids: {" ".join([str(x) for x in input_ids])}')
+        tf.logging.info(f'input_mask: {" ".join([str(x) for x in input_mask])}')
+        tf.logging.info(f'segment_ids: {" ".join([str(x) for x in segment_ids])}')
 
         if is_training and span_is_impossible:
           tf.logging.info("impossible example span")
@@ -612,18 +594,13 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
           answer_text = tokenizer.sp_model.DecodePieces(pieces)
           tf.logging.info("start_position: %d" % (start_position))
           tf.logging.info("end_position: %d" % (end_position))
-          tf.logging.info(
-              "answer: %s" % (tokenization.printable_text(answer_text)))
+          tf.logging.info(f"answer: {tokenization.printable_text(answer_text)}")
 
-          # note(zhiliny): With multi processing,
-          # the example_index is actually the index within the current process
-          # therefore we use example_index=None to avoid being used in the future.
-          # The current code does not use example_index of training data.
-      if is_training:
-        feat_example_index = None
-      else:
-        feat_example_index = example_index
-
+                  # note(zhiliny): With multi processing,
+                  # the example_index is actually the index within the current process
+                  # therefore we use example_index=None to avoid being used in the future.
+                  # The current code does not use example_index of training data.
+      feat_example_index = None if is_training else example_index
       feature = InputFeatures(
           unique_id=unique_id,
           example_index=feat_example_index,
@@ -740,7 +717,7 @@ def model_fn_builder(albert_config, init_checkpoint, learning_rate,
 
     tf.logging.info("*** Features ***")
     for name in sorted(features.keys()):
-      tf.logging.info("  name = %s, shape = %s" % (name, features[name].shape))
+      tf.logging.info(f"  name = {name}, shape = {features[name].shape}")
 
     unique_ids = features["unique_ids"]
     input_ids = features["input_ids"]
@@ -819,8 +796,7 @@ def model_fn_builder(albert_config, init_checkpoint, learning_rate,
       output_spec = contrib_tpu.TPUEstimatorSpec(
           mode=mode, predictions=predictions, scaffold_fn=scaffold_fn)
     else:
-      raise ValueError(
-          "Only TRAIN and PREDICT modes are supported: %s" % (mode))
+      raise ValueError(f"Only TRAIN and PREDICT modes are supported: {mode}")
 
     return output_spec
 

@@ -162,7 +162,7 @@ class Agent(agent.Agent):
 
   def save(self, ckpt_name):
     self._checkpointer['state'].write(ckpt_name)
-    self._checkpointer['behavior'].write(ckpt_name + '_behavior')
+    self._checkpointer['behavior'].write(f'{ckpt_name}_behavior')
 
   def restore(self, ckpt_name):
     self._checkpointer['state'].restore(ckpt_name)

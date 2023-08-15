@@ -37,7 +37,6 @@ def get_data_config(env_name, policy_root_dir=None):
       'agent_partial_target',
       )
   p1_pure = ['load', ckpt_file, ['none',], model_params]
-  data_config = [
+  return [
       ['p1_pure', p1_pure, 1],
   ]
-  return data_config

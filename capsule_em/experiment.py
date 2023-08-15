@@ -196,10 +196,7 @@ def get_features(train, total_batch):
                   shift=6)
           ]
         else:
-          if train and not FLAGS.distort:
-            shift = 2
-          else:
-            shift = 0
+          shift = 2 if train and not FLAGS.distort else 0
           features += [
               mnist_record.inputs(
                   train_dir=FLAGS.data_dir,
@@ -241,8 +238,8 @@ def run_training():
                        tf.local_variables_initializer())
     sess.run(init_op)
     saver = tf.train.Saver(max_to_keep=FLAGS.keep_ckpt)
-    if tf.gfile.Exists(FLAGS.summary_dir + '/train'):
-      ckpt = tf.train.get_checkpoint_state(FLAGS.summary_dir + '/train/')
+    if tf.gfile.Exists(f'{FLAGS.summary_dir}/train'):
+      ckpt = tf.train.get_checkpoint_state(f'{FLAGS.summary_dir}/train/')
       print(ckpt)
       if (not FLAGS.restart) and ckpt and ckpt.model_checkpoint_path:
         print('hesllo')
@@ -251,14 +248,13 @@ def run_training():
             ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1])
       else:
         print('what??')
-        tf.gfile.DeleteRecursively(FLAGS.summary_dir + '/train')
-        tf.gfile.MakeDirs(FLAGS.summary_dir + '/train')
+        tf.gfile.DeleteRecursively(f'{FLAGS.summary_dir}/train')
+        tf.gfile.MakeDirs(f'{FLAGS.summary_dir}/train')
         prev_step = 0
     else:
-      tf.gfile.MakeDirs(FLAGS.summary_dir + '/train')
+      tf.gfile.MakeDirs(f'{FLAGS.summary_dir}/train')
       prev_step = 0
-    train_writer = tf.summary.FileWriter(FLAGS.summary_dir + '/train',
-                                         sess.graph)
+    train_writer = tf.summary.FileWriter(f'{FLAGS.summary_dir}/train', sess.graph)
     coord = tf.train.Coordinator()
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
@@ -271,8 +267,9 @@ def run_training():
         if (i + 1) % FLAGS.checkpoint_steps == 0:
           saver.save(
               sess,
-              os.path.join(FLAGS.summary_dir + '/train', 'model.ckpt'),
-              global_step=i + 1)
+              os.path.join(f'{FLAGS.summary_dir}/train', 'model.ckpt'),
+              global_step=i + 1,
+          )
     except tf.errors.OutOfRangeError:
       print('Done training for %d steps.' % step)
     finally:
@@ -295,12 +292,12 @@ def run_eval():
     correct_prediction_sum = result['correct']
     almost_correct_sum = result['almost']
     saver = tf.train.Saver()
-    test_writer = tf.summary.FileWriter(FLAGS.summary_dir + '/test')
+    test_writer = tf.summary.FileWriter(f'{FLAGS.summary_dir}/test')
     seen_step = -1
     time.sleep(3 * 60)
     paused = 0
     while paused < 360:
-      ckpt = tf.train.get_checkpoint_state(FLAGS.summary_dir + '/train/')
+      ckpt = tf.train.get_checkpoint_state(f'{FLAGS.summary_dir}/train/')
       if ckpt and ckpt.model_checkpoint_path:
         # Restores from checkpoin
         global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
@@ -310,7 +307,7 @@ def run_eval():
         continue
       while seen_step == int(global_step):
         time.sleep(2 * 60)
-        ckpt = tf.train.get_checkpoint_state(FLAGS.summary_dir + '/train/')
+        ckpt = tf.train.get_checkpoint_state(f'{FLAGS.summary_dir}/train/')
         global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
         paused += 2
         if paused > 360:
@@ -451,7 +448,7 @@ def eval_once(ckpnt):
     logits = result['logits']
 
     saver = tf.train.Saver()
-    test_writer = tf.summary.FileWriter(FLAGS.summary_dir + '/test_once')
+    test_writer = tf.summary.FileWriter(f'{FLAGS.summary_dir}/test_once')
     config = tf.ConfigProto(allow_soft_placement=True)
     config.gpu_options.per_process_gpu_memory_fraction = 0.3
     sess = tf.Session(config=config)
@@ -476,13 +473,13 @@ def eval_once(ckpnt):
 
         total_tp += tp
       total_false = FLAGS.eval_size - total_tp
-      print('false:{}, true:{}'.format(total_false, total_tp))
-      # summary_tp = tf.Summary.FromString(summary_j)
-      # summary_tp.value.add(tag='correct_prediction', simple_value=total_tp)
-      # summary_tp.value.add(tag='wrong_prediction', simple_value=total_false)
-      # summary_tp.value.add(
-      #     tag='almost_wrong_prediction', simple_value=total_almost_false)
-      # test_writer.add_summary(summary_tp, i + 1)
+      print(f'false:{total_false}, true:{total_tp}')
+          # summary_tp = tf.Summary.FromString(summary_j)
+          # summary_tp.value.add(tag='correct_prediction', simple_value=total_tp)
+          # summary_tp.value.add(tag='wrong_prediction', simple_value=total_false)
+          # summary_tp.value.add(
+          #     tag='almost_wrong_prediction', simple_value=total_almost_false)
+          # test_writer.add_summary(summary_tp, i + 1)
     except tf.errors.OutOfRangeError:
       print('Done eval for %d steps.' % i)
     finally:
@@ -496,31 +493,31 @@ def eval_once(ckpnt):
 
 def main(_):
   if FLAGS.eval_ensemble:
-    if tf.gfile.Exists(FLAGS.summary_dir + '/test_ensemble'):
-      tf.gfile.DeleteRecursively(FLAGS.summary_dir + '/test_ensemble')
-    tf.gfile.MakeDirs(FLAGS.summary_dir + '/test_ensemble')
+    if tf.gfile.Exists(f'{FLAGS.summary_dir}/test_ensemble'):
+      tf.gfile.DeleteRecursively(f'{FLAGS.summary_dir}/test_ensemble')
+    tf.gfile.MakeDirs(f'{FLAGS.summary_dir}/test_ensemble')
     ensem = []
     for i in range(1, 12):
-      f_name = '/tmp/cifar10/{}{}{}-600000'.format(FLAGS.part1, i, FLAGS.part2)
+      f_name = f'/tmp/cifar10/{FLAGS.part1}{i}{FLAGS.part2}-600000'
       if tf.train.checkpoint_exists(f_name):
         ensem += [f_name]
 
     print(len(ensem))
     eval_ensemble(ensem)
   elif FLAGS.eval_once:
-    if tf.gfile.Exists(FLAGS.summary_dir + '/test_once'):
-      tf.gfile.DeleteRecursively(FLAGS.summary_dir + '/test_once')
-    tf.gfile.MakeDirs(FLAGS.summary_dir + '/test_once')
+    if tf.gfile.Exists(f'{FLAGS.summary_dir}/test_once'):
+      tf.gfile.DeleteRecursively(f'{FLAGS.summary_dir}/test_once')
+    tf.gfile.MakeDirs(f'{FLAGS.summary_dir}/test_once')
     eval_once(FLAGS.ckpnt)
   elif FLAGS.train:
     run_training()
   else:
-    if tf.gfile.Exists(FLAGS.summary_dir + '/test_once'):
-      tf.gfile.DeleteRecursively(FLAGS.summary_dir + '/test_once')
-    tf.gfile.MakeDirs(FLAGS.summary_dir + '/test_once')
-    if tf.gfile.Exists(FLAGS.summary_dir + '/test'):
-      tf.gfile.DeleteRecursively(FLAGS.summary_dir + '/test')
-    tf.gfile.MakeDirs(FLAGS.summary_dir + '/test')
+    if tf.gfile.Exists(f'{FLAGS.summary_dir}/test_once'):
+      tf.gfile.DeleteRecursively(f'{FLAGS.summary_dir}/test_once')
+    tf.gfile.MakeDirs(f'{FLAGS.summary_dir}/test_once')
+    if tf.gfile.Exists(f'{FLAGS.summary_dir}/test'):
+      tf.gfile.DeleteRecursively(f'{FLAGS.summary_dir}/test')
+    tf.gfile.MakeDirs(f'{FLAGS.summary_dir}/test')
     run_eval()
 
 

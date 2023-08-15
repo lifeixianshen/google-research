@@ -93,7 +93,7 @@ def add_convs(features):
 
   for i in range(int(FLAGS.extra_conv)):
     conv_outputs += [int(FLAGS.conv_dims.split(',')[i])]
-    with tf.variable_scope('conv{}'.format(i + 2)) as scope:
+    with tf.variable_scope(f'conv{i + 2}') as scope:
       kernel = utils.weight_variable(
           shape=[
               int(FLAGS.conv_kernels.split(',')[i]),

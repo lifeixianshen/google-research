@@ -117,10 +117,7 @@ def AddIntegratedGradientsOps(graph,
   """
   ops_to_tensors = lambda ops: [op.outputs[0] for op in ops]
   attribution_hooks = {}
-  if tensors_to_keep is None:
-    tensors_to_keep = []
-  else:
-    tensors_to_keep = list(tensors_to_keep)
+  tensors_to_keep = [] if tensors_to_keep is None else list(tensors_to_keep)
   if zero_baseline_tensors is None:
     zero_baseline_tensors = []
   with graph.as_default():
@@ -166,8 +163,8 @@ def AddIntegratedGradientsOps(graph,
     # Function to compute combined feed dict. The default setting of
     # baseline_transform_info is to get around python's late binding.
     def CreateCombinedFeedDict(input_feed_dict,
-                               baseline_feed_dict=None,
-                               baseline_transform_info=baseline_transform_info):
+                                   baseline_feed_dict=None,
+                                   baseline_transform_info=baseline_transform_info):
       """Combine baseline and input feed dicts into a common feed dict."""
       combined_feed_dict = input_feed_dict.copy()
       if baseline_feed_dict is None:
@@ -190,7 +187,7 @@ def AddIntegratedGradientsOps(graph,
               baseline_transform_info.transformed(key.dense_shape))
           combined_feed_dict[sparse_transformed_tensor] = feed_value
         else:
-          raise ValueError('Invalid key type %s in Feed Dict.' % type(key))
+          raise ValueError(f'Invalid key type {type(key)} in Feed Dict.')
       return combined_feed_dict
 
     attribution_hooks['create_combined_feed_dict'] = CreateCombinedFeedDict
@@ -307,13 +304,17 @@ def AddBOWIntegratedGradientsOps(graph,
         new_output_scope=new_output_scope,
         baseline_scope=baseline_scope,
         tensors_to_keep=tensors_to_keep)
-    attributions = []
-    for embedding_lookup, mean_grad, embedding in zip(
-        embedding_lookup_list, attribution_hooks['mean_grads'], embedding_list):
-      attributions.append(
-          tf.reduce_sum(
-              tf.squeeze(embedding_lookup, 0) * tf.expand_dims(mean_grad, 0) /
-              (embedding + sys.float_info.epsilon), 1))
+    attributions = [
+        tf.reduce_sum(
+            tf.squeeze(embedding_lookup, 0) * tf.expand_dims(mean_grad, 0) /
+            (embedding + sys.float_info.epsilon),
+            1,
+        ) for embedding_lookup, mean_grad, embedding in zip(
+            embedding_lookup_list,
+            attribution_hooks['mean_grads'],
+            embedding_list,
+        )
+    ]
     attribution_hooks['bow_attributions'] = attributions
     attribution_hooks['num_evals'] = num_evals
   return attribution_hooks

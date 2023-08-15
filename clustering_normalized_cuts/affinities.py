@@ -44,8 +44,7 @@ def squared_distance(input_x, input_y=None, weight=None):
     input_x /= d_diag
     input_y /= d_diag
   squared_difference = K.square(input_x - input_y)
-  distance = K.sum(squared_difference, axis=sum_dimensions)
-  return distance
+  return K.sum(squared_difference, axis=sum_dimensions)
 
 
 def knn_affinity(input_x,
@@ -165,8 +164,7 @@ def full_affinity(input_x, scale):
   sigma = K.variable(scale)
   dist_x = squared_distance(input_x)
   sigma_squared = K.expand_dims(K.pow(sigma, 2), -1)
-  weight_mat = K.exp(-dist_x / (2 * sigma_squared))
-  return weight_mat
+  return K.exp(-dist_x / (2 * sigma_squared))
 
 
 def get_contrastive_loss(m_neg=1, m_pos=.2):

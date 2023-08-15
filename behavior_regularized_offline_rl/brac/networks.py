@@ -88,15 +88,11 @@ class ActorNetwork(tf.Module):
 
   def get_log_density(self, state, action):
     a_dist, _ = self._get_outputs(state)
-    log_density = a_dist.log_prob(action)
-    return log_density
+    return a_dist.log_prob(action)
 
   @property
   def weights(self):
-    w_list = []
-    for l in self._layers:
-      w_list.append(l.weights[0])
-    return w_list
+    return [l.weights[0] for l in self._layers]
 
   def __call__(self, state):
     a_dist, a_tanh_mode = self._get_outputs(state)
@@ -143,10 +139,7 @@ class CriticNetwork(tf.Module):
 
   @property
   def weights(self):
-    w_list = []
-    for l in self._layers:
-      w_list.append(l.weights[0])
-    return w_list
+    return [l.weights[0] for l in self._layers]
 
 
 class BCQActorNetwork(tf.Module):
@@ -191,10 +184,7 @@ class BCQActorNetwork(tf.Module):
 
   @property
   def weights(self):
-    w_list = []
-    for l in self._layers:
-      w_list.append(l.weights[0])
-    return w_list
+    return [l.weights[0] for l in self._layers]
 
   def __call__(self, state, action):
     return self._get_outputs(state, action)
@@ -257,10 +247,7 @@ class BCQVAENetwork(tf.Module):
     h = tf.concat([state, z], axis=-1)
     for l in self._decoder_layers:
       h = l(h)
-    a = tf.tanh(h) * self._action_mags + self._action_means
-    # a = tf.clip_by_value(
-    #     a, self._action_spec.minimum, self._action_spec.maximum)
-    return a
+    return tf.tanh(h) * self._action_mags + self._action_means
 
   def sample(self, state):
     z = tf.random.normal(shape=[state.shape[0], self._latent_dim])
@@ -280,11 +267,8 @@ class BCQVAENetwork(tf.Module):
 
   @property
   def weights(self):
-    w_list = []
-    for l in self._encoder_layers:
-      w_list.append(l.weights[0])
-    for l in self._decoder_layers:
-      w_list.append(l.weights[0])
+    w_list = [l.weights[0] for l in self._encoder_layers]
+    w_list.extend(l.weights[0] for l in self._decoder_layers)
     return w_list
 
   def __call__(self, state, action):
